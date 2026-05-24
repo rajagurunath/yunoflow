@@ -13,7 +13,7 @@ Tracks phase gates from `backend-implementation-plan.md`. Each phase ends green 
 | P5 Differentiators (A2A + DeepAgents, gated) | ⬜ | `P5_GREEN` | droppable bonus (after frontend + P7/P8) |
 | P6 Durability (DBOS, gated) | ⬜ | `P6_GREEN` | droppable |
 | P7 Hardening | ✅ GREEN | `P7_GREEN` | ruff clean; 14 tests pass; /api/channels CRUD + /status (real bot live). FIXED latent bug: LLM condition nodes defaulted to model gpt-4o-mini → 404 on io.net → always took default branch. Now use settings.llm_model + classify on last human turn. Routing verified both branches (refund→refund, info→faq). |
-| P8 Docs & Demo | ⬜ | `P8_GREEN` | |
+| P8 Docs & Demo | ✅ GREEN | `P8_GREEN` | README: mermaid diagram, runtime justification, one-command setup, protocol map, agent dimensions, templates, extension guides, API+WS ref, testing, future directions. Screenshots in docs/screenshots. `make up` boots db+backend+frontend verified. demo.gif placeholder for candidate recording. |
 
 ## Resolved versions (P0)
 langgraph 1.1.6 · langgraph-checkpoint-postgres 3.1.0 · langchain-openai 0.3.34 · langchain-core 1.2.31 · aiogram 3.28.2 · fastapi 0.136.3 · sqlalchemy 2.0.49 · alembic 1.18.4 · pydantic 2.13.4
