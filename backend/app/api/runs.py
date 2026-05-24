@@ -1,4 +1,8 @@
-"""Run lifecycle: create, list, get, messages, resume."""
+"""Run lifecycle: create, list, get, messages, resume.
+
+The graph is built per run via the builder (compiled from the workflow's
+graph_json, or the P1 fixed fallback when the workflow has no nodes).
+"""
 from __future__ import annotations
 
 import asyncio
@@ -10,24 +14,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_executor
-from app.core.errors import AppError, NotFoundError
-from app.models import Agent, Message, Workflow, WorkflowRun
+from app.core.errors import NotFoundError
+from app.models import Message, Workflow, WorkflowRun
+from app.runtime.builder import build_graph_for_workflow
 from app.runtime.executor import Executor
 from app.schemas.run import MessageRead, ResumeRequest, RunCreate, RunRead
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
-
-
-async def _resolve_agents(db: AsyncSession, agent_ids: list[uuid.UUID] | None):
-    if agent_ids:
-        agents = [await db.get(Agent, aid) for aid in agent_ids]
-        agents = [a for a in agents if a is not None]
-    else:
-        agents = (await db.execute(select(Agent).order_by(Agent.created_at).limit(2))).scalars().all()
-    if len(agents) < 2:
-        raise AppError("need at least 2 agents (researcher, writer) to run the P1 graph",
-                       code="insufficient_agents", status_code=422)
-    return agents[0], agents[1]
 
 
 async def _demo_workflow(db: AsyncSession) -> Workflow:
@@ -50,10 +43,11 @@ def _spawn(request: Request, coro) -> None:
 async def create_run(body: RunCreate, request: Request,
                      db: AsyncSession = Depends(get_db),
                      executor: Executor = Depends(get_executor)):
-    researcher, writer = await _resolve_agents(db, body.agent_ids)
     wf = await db.get(Workflow, body.workflow_id) if body.workflow_id else None
     if wf is None:
         wf = await _demo_workflow(db)
+
+    graph = await build_graph_for_workflow(db, wf, executor.cp)
 
     run = WorkflowRun(workflow_id=wf.id, status="pending")
     db.add(run)
@@ -64,7 +58,7 @@ async def create_run(body: RunCreate, request: Request,
         "messages": [HumanMessage(content=body.input.message or "")],
         "scratch": dict(body.input.vars or {}),
     }
-    _spawn(request, executor.run(run.id, researcher, writer, initial))
+    _spawn(request, executor.run(run.id, graph, initial))
     return run
 
 
@@ -103,6 +97,7 @@ async def resume_run(run_id: uuid.UUID, body: ResumeRequest, request: Request,
     run = await db.get(WorkflowRun, run_id)
     if run is None:
         raise NotFoundError(f"run {run_id} not found")
-    researcher, writer = await _resolve_agents(db, None)
-    _spawn(request, executor.resume(run_id, researcher, writer, body.value))
+    wf = await db.get(Workflow, run.workflow_id)
+    graph = await build_graph_for_workflow(db, wf, executor.cp)
+    _spawn(request, executor.resume(run_id, graph, body.value))
     return run

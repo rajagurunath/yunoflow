@@ -1,8 +1,7 @@
 """Routes inbound channel messages to the runtime (start or resume a run).
 
-P1 binding logic is intentionally simple: pick the two most-recent agents and a
-demo workflow, and resume the latest waiting run for the same chat. P3 replaces
-this with proper ChannelBinding resolution.
+P1/P2 binding logic is intentionally simple: a demo workflow + resume the
+latest waiting run for the same chat. P3 adds proper ChannelBinding resolution.
 """
 from __future__ import annotations
 
@@ -14,7 +13,8 @@ from sqlalchemy import select
 from app.channels.base import InboundMessage
 from app.core.db import SessionLocal
 from app.core.logging import get_logger
-from app.models import Agent, Message, Workflow, WorkflowRun
+from app.models import Message, Workflow, WorkflowRun
+from app.runtime.builder import build_graph_for_workflow
 from app.runtime.executor import Executor
 
 log = get_logger(__name__)
@@ -22,7 +22,7 @@ log = get_logger(__name__)
 SendFn = Callable[[str, str], Awaitable[None]]
 
 
-async def _noop_send(external_chat_id: str, text: str) -> None:  # default until a channel binds
+async def _noop_send(external_chat_id: str, text: str) -> None:
     log.info("reply.noop", chat=external_chat_id, text=text[:120])
 
 
@@ -31,12 +31,6 @@ class ChannelRouter:
         self.executor = executor
         self.send: SendFn = send or _noop_send
         self.sf = session_factory
-
-    async def _two_agents(self, s):
-        rows = (await s.execute(select(Agent).order_by(Agent.created_at).limit(2))).scalars().all()
-        if len(rows) < 2:
-            raise RuntimeError("channel routing needs at least 2 agents")
-        return rows[0], rows[1]
 
     async def _demo_workflow(self, s) -> Workflow:
         wf = (await s.execute(select(Workflow).where(Workflow.name == "Fixed Demo (P1)"))).scalars().first()
@@ -48,7 +42,6 @@ class ChannelRouter:
         return wf
 
     async def _latest_waiting_for_chat(self, s, external_chat_id: str) -> WorkflowRun | None:
-        # Find the most recent run that produced a message for this chat and is waiting.
         stmt = (
             select(WorkflowRun)
             .join(Message, Message.run_id == WorkflowRun.id)
@@ -63,17 +56,22 @@ class ChannelRouter:
             await self.send(m.external_chat_id, text)
 
         async with self.sf() as s:
-            researcher, writer = await self._two_agents(s)
-            wf = await self._demo_workflow(s)
             waiting = await self._latest_waiting_for_chat(s, m.external_chat_id)
+            if waiting is not None:
+                wf = await s.get(Workflow, waiting.workflow_id)
+                graph = await build_graph_for_workflow(s, wf, self.executor.cp)
+            else:
+                wf = await self._demo_workflow(s)
+                graph = await build_graph_for_workflow(s, wf, self.executor.cp)
+                wf_id = wf.id
 
         if waiting is not None:
             await self._persist_inbound(waiting.id, m)
-            await self.executor.resume(waiting.id, researcher, writer, m.text, on_reply=reply)
+            await self.executor.resume(waiting.id, graph, m.text, on_reply=reply)
             return
 
         async with self.sf() as s:
-            run = WorkflowRun(workflow_id=wf.id, status="pending")
+            run = WorkflowRun(workflow_id=wf_id, status="pending")
             s.add(run)
             await s.commit()
             await s.refresh(run)
@@ -81,7 +79,7 @@ class ChannelRouter:
 
         await self._persist_inbound(run_id, m)
         await self.executor.run(
-            run_id, researcher, writer,
+            run_id, graph,
             {"messages": [HumanMessage(content=m.text)], "scratch": {}},
             on_reply=reply,
         )

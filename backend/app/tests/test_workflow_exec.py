@@ -7,15 +7,17 @@ from sqlalchemy import select
 
 from app.core.db import SessionLocal
 from app.models import Message, Usage, WorkflowRun
+from app.runtime.fixed_graph import build_fixed_graph
 
 
 @pytest.mark.asyncio
 async def test_workflow_execution(executor, two_agents, make_run):
     researcher, writer = two_agents
     run_id = await make_run()
+    graph = build_fixed_graph(researcher, writer, executor.cp)
 
     status = await executor.run(
-        run_id, researcher, writer,
+        run_id, graph,
         {"messages": [HumanMessage(content="hello")], "scratch": {}},
     )
     assert status == "completed"
@@ -38,9 +40,10 @@ async def test_workflow_execution(executor, two_agents, make_run):
 async def test_interrupt_then_resume(executor, two_agents, make_run):
     researcher, writer = two_agents
     run_id = await make_run()
+    graph = build_fixed_graph(researcher, writer, executor.cp)
 
     status = await executor.run(
-        run_id, researcher, writer,
+        run_id, graph,
         {"messages": [HumanMessage(content="refund please")], "scratch": {"require_approval": True}},
     )
     assert status == "waiting_human"
@@ -49,7 +52,7 @@ async def test_interrupt_then_resume(executor, two_agents, make_run):
         run = await s.get(WorkflowRun, run_id)
     assert run.status == "waiting_human"
 
-    status2 = await executor.resume(run_id, researcher, writer, "ok proceed")
+    status2 = await executor.resume(run_id, graph, "ok proceed")
     assert status2 == "completed"
 
     async with SessionLocal() as s:

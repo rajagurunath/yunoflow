@@ -6,7 +6,7 @@ Tracks phase gates from `backend-implementation-plan.md`. Each phase ends green 
 |---|---|---|---|
 | P0 Skeleton | ✅ GREEN | `P0_GREEN` | docker compose up boots; /health ok; 7 tables via Alembic. db host port → **5433** (5432 was taken). mlflow moved to `[obs]` extra. |
 | P1 Vertical Slice 🛡️ | ✅ GREEN | `P1_GREEN` | Agent CRUD; fixed researcher→reviewer→writer LangGraph w/ AsyncPostgresSaver; executor (updates stream + robust interrupt detect via aget_state); Telegram long-poll + router; /api/runs + messages + resume. 3 tests pass; live run completed against real LLM; telegram.started confirmed. NullPool for asyncio safety; tz-aware datetimes fixed. |
-| P2 Visual Builder + Compiler | ⬜ | `P2_GREEN` | |
+| P2 Visual Builder + Compiler | ✅ GREEN | `P2_GREEN` | schemas/graph.py; compiler.py (validate + ReactFlow→StateGraph, conditional edges via path_map on state['route'], native cycles); generic nodes (agent/condition[value\|expr\|llm]/tool); builder.py (compiled vs fixed fallback); Executor refactored graph-agnostic; /api/workflows CRUD + /validate. 10 tests pass; live compiled workflow ran end-to-end. |
 | P3 Config + Tools + Templates + Scheduling | ⬜ | `P3_GREEN` | |
 | P4 Monitoring + Observability | ⬜ | `P4_GREEN` | langchain-core 1.2.31 is above mlflow autolog range (0.3.25–1.2.15) — verify/pin at P4 |
 | P5 Differentiators (A2A + DeepAgents, gated) | ⬜ | `P5_GREEN` | droppable |

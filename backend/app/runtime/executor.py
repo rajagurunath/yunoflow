@@ -15,7 +15,6 @@ from app.core.db import SessionLocal
 from app.core.logging import get_logger
 from app.core.pricing import price_for
 from app.models import Message, Usage, WorkflowRun
-from app.runtime.fixed_graph import build_fixed_graph
 
 log = get_logger(__name__)
 
@@ -48,13 +47,11 @@ class Executor:
         self.cp = checkpointer
         self.sf = session_factory
 
-    async def run(self, run_id, researcher, writer, initial_input, on_reply=None) -> str:
-        graph = build_fixed_graph(researcher, writer, self.cp)
+    async def run(self, run_id, graph, initial_input, on_reply=None) -> str:
         await self._set_status(run_id, "running", started=True)
         return await self._stream(run_id, graph, initial_input, on_reply)
 
-    async def resume(self, run_id, researcher, writer, value, on_reply=None) -> str:
-        graph = build_fixed_graph(researcher, writer, self.cp)
+    async def resume(self, run_id, graph, value, on_reply=None) -> str:
         await self._set_status(run_id, "running")
         return await self._stream(run_id, graph, Command(resume=value), on_reply)
 

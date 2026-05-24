@@ -32,8 +32,13 @@ async def _clean_db():
 
 
 @pytest.fixture
-def executor():
-    return Executor(in_memory_checkpointer())
+def checkpointer():
+    return in_memory_checkpointer()
+
+
+@pytest.fixture
+def executor(checkpointer):
+    return Executor(checkpointer)
 
 
 @pytest_asyncio.fixture
