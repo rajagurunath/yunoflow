@@ -43,14 +43,23 @@ def _now() -> dt.datetime:
 
 
 class Executor:
-    def __init__(self, checkpointer, session_factory=SessionLocal):
+    def __init__(self, checkpointer, session_factory=SessionLocal, bus=None):
         self.cp = checkpointer
         self.sf = session_factory
+        self.bus = bus
+
+    async def _event(self, run_id, type_, data=None) -> None:
+        if self.bus:
+            try:
+                await self.bus.emit(run_id, type_, data or {})
+            except Exception:  # noqa: BLE001
+                pass
 
     async def run(self, run_id, graph, initial_input, on_reply=None, *,
                   recursion_limit: int = 25, max_tokens: int | None = None,
                   max_cost: float | None = None) -> str:
         await self._set_status(run_id, "running", started=True)
+        await self._event(run_id, "run_started", {})
         return await self._stream(run_id, graph, initial_input, on_reply,
                                   recursion_limit, max_tokens, max_cost)
 
@@ -58,6 +67,7 @@ class Executor:
                      recursion_limit: int = 25, max_tokens: int | None = None,
                      max_cost: float | None = None) -> str:
         await self._set_status(run_id, "running")
+        await self._event(run_id, "run_status", {"status": "running"})
         return await self._stream(run_id, graph, Command(resume=value), on_reply,
                                   recursion_limit, max_tokens, max_cost)
 
@@ -88,19 +98,30 @@ class Executor:
                         if isinstance(msg, AIMessage):
                             await self._persist(run_id, "assistant", content, node_id=node_id,
                                                 tokens=tt, cost=cost)
-                            if tt:
-                                await self._persist_usage(run_id, node_id, model_name, pt, ct, tt, cost)
                             total_tokens += tt
                             total_cost += cost
                             final_text = content
+                            await self._event(run_id, "agent_message", {
+                                "node_id": node_id, "role": "assistant", "content": content,
+                                "tokens": tt, "cost_usd": cost})
+                            if tt:
+                                await self._persist_usage(run_id, node_id, model_name, pt, ct, tt, cost)
+                                await self._event(run_id, "token_usage", {
+                                    "node_id": node_id, "model": model_name,
+                                    "prompt_tokens": pt, "completion_tokens": ct, "total_tokens": tt,
+                                    "cost_usd": cost, "cumulative_tokens": total_tokens,
+                                    "cumulative_cost_usd": round(total_cost, 6)})
                             if (max_tokens and total_tokens > max_tokens) or (
                                 max_cost and total_cost > max_cost
                             ):
                                 await self._finalize(run_id, "failed", total_tokens, total_cost,
                                                      error="budget_exceeded")
+                                await self._event(run_id, "error", {"message": "budget_exceeded"})
                                 return "failed"
                         else:
                             await self._persist(run_id, _role_of(msg), content, node_id=node_id)
+                            await self._event(run_id, "agent_message", {
+                                "node_id": node_id, "role": _role_of(msg), "content": content})
 
             # Robust pause detection: if the graph still has a next node, it interrupted.
             if question is None:
@@ -111,11 +132,15 @@ class Executor:
             if question is not None:
                 await self._persist(run_id, "assistant", question, node_id="interrupt")
                 await self._set_status(run_id, "waiting_human")
+                await self._event(run_id, "interrupt", {"node_id": "interrupt", "value": question})
                 if on_reply:
                     await on_reply(question)
                 return "waiting_human"
 
             await self._finalize(run_id, "completed", total_tokens, total_cost)
+            await self._event(run_id, "run_completed", {"status": "completed",
+                                                        "total_tokens": total_tokens,
+                                                        "total_cost_usd": round(total_cost, 6)})
             if on_reply and final_text:
                 await on_reply(final_text)
             return "completed"
@@ -124,6 +149,7 @@ class Executor:
             # background tasks must not crash the event loop.
             log.error("executor.failed", run_id=str(run_id), error=str(exc))
             await self._finalize(run_id, "failed", total_tokens, total_cost, error=str(exc))
+            await self._event(run_id, "error", {"message": str(exc)})
             return "failed"
 
     # --- persistence helpers (own sessions; executor runs outside request scope) ---

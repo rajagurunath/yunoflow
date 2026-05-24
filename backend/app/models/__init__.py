@@ -3,6 +3,7 @@ from app.models.agent import Agent
 from app.models.base import Base
 from app.models.channel_binding import ChannelBinding
 from app.models.message import Message
+from app.models.run_event import RunEvent
 from app.models.template import Template
 from app.models.usage import Usage
 from app.models.workflow import Workflow
@@ -17,4 +18,5 @@ __all__ = [
     "ChannelBinding",
     "Template",
     "Usage",
+    "RunEvent",
 ]

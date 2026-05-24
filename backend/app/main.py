@@ -9,7 +9,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import agents, health, runs, templates, tools, workflows
+from app.api import agents, health, runs, templates, tools, workflows, ws
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 
@@ -25,12 +25,18 @@ async def lifespan(app: FastAPI):
     stack = AsyncExitStack()
     app.state.stack = stack
 
-    # Checkpointer (persistence/memory/interrupt-resume) + executor.
+    # Deep observability (flagged): MLflow autolog.
+    from app.observability.mlflow_tracing import setup_mlflow
+    setup_mlflow()
+
+    # Checkpointer + event bus + executor.
     from app.runtime.checkpointer import open_postgres_checkpointer
+    from app.runtime.events import EventBus
     from app.runtime.executor import Executor
 
     checkpointer = await open_postgres_checkpointer(stack)
-    app.state.executor = Executor(checkpointer)
+    app.state.event_bus = EventBus()
+    app.state.executor = Executor(checkpointer, bus=app.state.event_bus)
 
     # Channels (Telegram long-polling, if a token is configured).
     from app.channels.manager import ChannelManager
@@ -88,6 +94,7 @@ def create_app() -> FastAPI:
     app.include_router(workflows.router)    # /api/workflows
     app.include_router(templates.router)    # /api/templates
     app.include_router(runs.router)         # /api/runs
+    app.include_router(ws.router)           # /api/ws/runs/{id}
 
     return app
 

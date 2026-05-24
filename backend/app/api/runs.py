@@ -15,10 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_executor
 from app.core.errors import NotFoundError
-from app.models import Message, Workflow, WorkflowRun
+from app.models import Message, Usage, Workflow, WorkflowRun
 from app.runtime.builder import build_graph_for_workflow
 from app.runtime.executor import Executor
-from app.schemas.run import MessageRead, ResumeRequest, RunCreate, RunRead
+from app.schemas.run import (
+    MessageRead, ResumeRequest, RunCreate, RunRead, UsageRead, UsageSummary,
+)
 from app.tools.guardrails import budget_for, recursion_limit_for
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
@@ -48,7 +50,7 @@ async def create_run(body: RunCreate, request: Request,
     if wf is None:
         wf = await _demo_workflow(db)
 
-    graph, agents = await build_graph_for_workflow(db, wf, executor.cp)
+    graph, agents = await build_graph_for_workflow(db, wf, executor.cp, agent_ids=body.agent_ids)
     rlimit = recursion_limit_for(agents)
     max_tokens, max_cost = budget_for(agents)
 
@@ -92,6 +94,23 @@ async def get_run_messages(run_id: uuid.UUID, db: AsyncSession = Depends(get_db)
     if channel:
         stmt = stmt.where(Message.channel == channel)
     return (await db.execute(stmt)).scalars().all()
+
+
+@router.get("/{run_id}/usage", response_model=UsageSummary)
+async def get_run_usage(run_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(
+        select(Usage).where(Usage.run_id == run_id).order_by(Usage.created_at))).scalars().all()
+    return UsageSummary(
+        items=[UsageRead.model_validate(r) for r in rows],
+        total_tokens=sum(r.total_tokens for r in rows),
+        total_cost_usd=round(sum(r.cost_usd for r in rows), 6),
+    )
+
+
+@router.get("/{run_id}/events")
+async def get_run_events(run_id: uuid.UUID, request: Request) -> list[dict]:
+    """Persisted monitor events (the WebSocket replays these on connect)."""
+    return await request.app.state.event_bus.history(run_id)
 
 
 @router.post("/{run_id}/resume", response_model=RunRead)

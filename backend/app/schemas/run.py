@@ -50,3 +50,22 @@ class MessageRead(BaseModel):
 
 class ResumeRequest(BaseModel):
     value: str
+
+
+class UsageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    node_id: str | None = None
+    model: str | None = None
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    cost_usd: float
+    created_at: datetime
+
+
+class UsageSummary(BaseModel):
+    items: list[UsageRead]
+    total_tokens: int
+    total_cost_usd: float

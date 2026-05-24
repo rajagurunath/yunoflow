@@ -19,7 +19,7 @@ from app.schemas.graph import GraphJSON
 from app.tools import registry
 
 
-async def build_graph_for_workflow(db, workflow, checkpointer):
+async def build_graph_for_workflow(db, workflow, checkpointer, agent_ids=None):
     graph_json = (workflow.graph_json if workflow else None) or {}
     if graph_json.get("nodes"):
         graph_def = GraphJSON.model_validate(graph_json)
@@ -40,7 +40,12 @@ async def build_graph_for_workflow(db, workflow, checkpointer):
         )
         return graph, list(agents.values())
 
-    rows = (await db.execute(select(Agent).order_by(Agent.created_at).limit(2))).scalars().all()
+    # Fixed fallback: use the explicitly requested agents if given, else the two oldest.
+    if agent_ids:
+        rows = [await db.get(Agent, aid) for aid in agent_ids]
+        rows = [a for a in rows if a is not None]
+    else:
+        rows = list((await db.execute(select(Agent).order_by(Agent.created_at).limit(2))).scalars().all())
     if len(rows) < 2:
         raise AppError("need at least 2 agents to run", code="insufficient_agents", status_code=422)
     return build_fixed_graph(rows[0], rows[1], checkpointer), list(rows)
