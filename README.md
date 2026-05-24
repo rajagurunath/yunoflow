@@ -225,14 +225,16 @@ for determinism. `make lint` runs ruff.
 
 ## Future directions (designed, not built)
 
-**Built (bonus, beyond the brief):** **DeepAgents** — a planning + sub-agent +
-filesystem node (the Dispute Investigator template); **A2A** Agent Card discovery
-(`/api/a2a/agents`) making agents A2A-addressable; **MLflow** deep tracing (flag +
-`[obs]` extra + compose profile).
+**Built (bonus, beyond the brief), all gated/flagged so the core stays lean:**
+**DeepAgents** — a planning + sub-agent + filesystem node (the Dispute
+Investigator template); **A2A** Agent Card discovery (`/api/a2a/agents`) making
+agents A2A-addressable; **DBOS** durable execution (`FEATURE_DBOS` + `[dbos]`
+extra — Postgres-native durable workflows + a scheduled sweep, verified
+launchable); **MLflow** deep tracing (`FEATURE_MLFLOW` + `[obs]` extra + compose
+profile).
 
 **Designed, not shipped** (scoped out to protect the core, documented for
 credibility): full **A2A** JSON-RPC task execution (the a2a-sdk 1.x runtime is
-Protobuf-backed), **DBOS** durable execution over the same Postgres, **AG-UI**
-(standardize the event stream), **MCP** (tool exposure), full **AP2** rails, and
-**Temporal/Hatchet** at scale. See
+Protobuf-backed), **AG-UI** (standardize the event stream), **MCP** (tool
+exposure), full **AP2** rails, and **Temporal/Hatchet** at scale. See
 [`tech-docs/backend-implementation-plan.md`](tech-docs/backend-implementation-plan.md).

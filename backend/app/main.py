@@ -67,10 +67,15 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001
         log.warning("seed.failed", error=str(exc))
 
+    # Durable execution (gated, default off; no-op without [dbos] extra/flag).
+    from app.scheduling.dbos_workflows import init_dbos, shutdown_dbos
+    init_dbos()
+
     try:
         yield
     finally:
         log.info("app.shutdown")
+        shutdown_dbos()
         sched.shutdown()
         await manager.stop_all()
         await stack.aclose()
