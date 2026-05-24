@@ -19,6 +19,10 @@ class WorkflowUpdate(BaseModel):
     graph_json: dict | None = None
 
 
+class GenerateRequest(BaseModel):
+    prompt: str
+
+
 class WorkflowRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

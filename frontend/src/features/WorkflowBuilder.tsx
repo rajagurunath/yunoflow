@@ -6,6 +6,7 @@ import {
 import { api, openRunSocket } from "../lib/api";
 import type { Agent, GraphJSON, Run, Workflow, WSEvent } from "../lib/types";
 import { layoutPositions } from "../lib/layout";
+import { startVoice, voiceSupported } from "../lib/voice";
 import { nodeTypes } from "../nodes/nodes";
 import { Button, Panel, Pill, statusTone } from "../components/ui";
 
@@ -72,6 +73,36 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [agents, setAgents] = useState<Agent[]>([]);
   const [monitor, setMonitor] = useState<"normal" | "wide" | "closed">("normal");
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Natural-language / voice workflow generation (Workflows landing view)
+  const [genPrompt, setGenPrompt] = useState("");
+  const [genBusy, setGenBusy] = useState(false);
+  const [genErr, setGenErr] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const voiceRef = useRef<{ stop: () => void } | null>(null);
+
+  const generate = async () => {
+    if (!genPrompt.trim()) return;
+    setGenBusy(true); setGenErr(null);
+    try {
+      const wf = await api.generateWorkflow(genPrompt.trim());
+      onOpen(wf.id);
+    } catch (e) {
+      setGenErr(String(e));
+    } finally {
+      setGenBusy(false);
+    }
+  };
+
+  const toggleVoice = () => {
+    if (listening) { voiceRef.current?.stop(); setListening(false); return; }
+    const handle = startVoice({
+      onText: (t) => setGenPrompt(t),
+      onEnd: () => setListening(false),
+      onError: () => setListening(false),
+    });
+    if (handle) { voiceRef.current = handle; setListening(true); }
+  };
 
   // When connecting out of a condition node, ask for the branch label.
   const onConnect = useCallback((c: Connection) => {
@@ -205,7 +236,40 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
             onOpen(w.id);
           }}>＋ New workflow</Button>
         </div>
-        <p className="mt-1 text-t2">Open a workflow to edit and run it, build one from scratch, or create from a template.</p>
+        <p className="mt-1 text-t2">Describe a workflow and let AI build it, start from scratch, or open one below.</p>
+
+        {/* Natural-language / voice workflow generation */}
+        <Panel className="mt-6 p-5">
+          <div className="flex items-center gap-2">
+            <span className="font-disp text-base">✨ Describe your workflow</span>
+            <span className="font-mono text-[10px] text-t2">— AI designs the agents + graph; speak or type</span>
+          </div>
+          <div className="mt-3 flex items-start gap-2">
+            <textarea
+              value={genPrompt}
+              onChange={(e) => setGenPrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) generate(); }}
+              placeholder="e.g. Triage a customer message; route refunds to a refund agent that can issue payments, and questions to an FAQ agent that uses the knowledge base."
+              className="h-20 flex-1 resize-none rounded-lg border border-line2 bg-bg1 px-3 py-2 text-sm text-t0 outline-none focus:border-mint/50"
+            />
+            <div className="flex flex-col gap-2">
+              {voiceSupported() && (
+                <button
+                  onClick={toggleVoice}
+                  title="Speak your workflow"
+                  className={`grid h-10 w-10 place-items-center rounded-lg border text-lg ${
+                    listening ? "border-coral/50 bg-coral/10 text-coral animate-pulse" : "border-line2 text-t1 hover:text-t0"}`}
+                >🎙</button>
+              )}
+              <Button variant="primary" onClick={generate} disabled={genBusy || !genPrompt.trim()}>
+                {genBusy ? "Designing…" : "Generate"}
+              </Button>
+            </div>
+          </div>
+          {listening && <div className="mt-2 font-mono text-[11px] text-coral">● listening… (speak, then it fills in)</div>}
+          {genErr && <div className="mt-2 font-mono text-[11px] text-coral">{genErr}</div>}
+        </Panel>
+
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {workflows.map((w) => (
             <Panel key={w.id} className="cursor-pointer p-4 hover:border-line2" >
