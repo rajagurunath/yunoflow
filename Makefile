@@ -28,6 +28,7 @@ seed:
 
 test:
 	cd backend && uv run --extra dev pytest -q
+	cd frontend && npm test
 
 lint:
 	cd backend && uv run --extra dev ruff check .

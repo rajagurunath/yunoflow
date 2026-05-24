@@ -219,7 +219,8 @@ round-trip), **workflow execution** + **interrupt/resume**, **message delivery**
 (channel inbound → agent → outbound), the **Compiler** (linear, conditional both
 branches, cycle, validation), **guardrails** (recursion + budget), and the
 **event stream** (envelope shape, seq monotonicity, replay). LLM calls are mocked
-for determinism. `make lint` runs ruff.
+for determinism. The frontend adds Vitest unit tests for the graph layout logic.
+`make lint` runs ruff.
 
 ---
 
