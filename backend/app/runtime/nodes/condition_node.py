@@ -10,6 +10,7 @@ from __future__ import annotations
 from langchain_core.messages import SystemMessage
 
 from app.core import llm as llm_module
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.runtime.state import AgentState
 
@@ -29,15 +30,28 @@ def _safe_eval(expr: str, state: AgentState):
 
 
 async def _classify(factory, messages, labels, prompt, model) -> str | None:
-    instruction = (prompt or "Classify the conversation into one category.") + (
-        f" Reply with exactly one of: {', '.join(labels)}."
+    options = ", ".join(labels)
+    instruction = (
+        (prompt or "Classify the user's request into one category.")
+        + f"\nRespond with EXACTLY ONE of these labels and nothing else: {options}."
     )
-    resp = await factory(model=model, temperature=0).ainvoke([SystemMessage(content=instruction), *messages])
-    text = str(getattr(resp, "content", "") or "").lower()
+    # Route on the user's actual request (last human turn), not intermediate
+    # agent chatter which would otherwise bias the classifier.
+    last_human = next((m for m in reversed(messages) if getattr(m, "type", "") == "human"), None)
+    context = [last_human] if last_human is not None else list(messages)
+    resp = await factory(model=model, temperature=0).ainvoke([SystemMessage(content=instruction), *context])
+    text = str(getattr(resp, "content", "") or "").strip().lower()
+    # 1) exact match (the model followed instructions)
     for label in labels:
-        if label.lower() in text:
+        if text == label.lower():
             return label
-    return None
+    # 2) otherwise pick the label mentioned earliest in the reply
+    best, best_pos = None, len(text) + 1
+    for label in labels:
+        pos = text.find(label.lower())
+        if pos != -1 and pos < best_pos:
+            best, best_pos = label, pos
+    return best
 
 
 def make_condition_node(data: dict, llm_factory=None):
@@ -45,7 +59,7 @@ def make_condition_node(data: dict, llm_factory=None):
     labels = [b.get("label") for b in branches]
     default = data.get("default") or (labels[0] if labels else None)
     mode = data.get("mode", "llm")
-    model = data.get("model", "gpt-4o-mini")
+    model = data.get("model") or settings.llm_model
 
     async def node(state: AgentState) -> dict:
         route = None

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pytest
 from langchain_core.messages import HumanMessage
-from sqlalchemy import select
 
 from app.core.db import SessionLocal
 from app.models import WorkflowRun

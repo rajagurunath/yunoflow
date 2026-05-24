@@ -9,7 +9,6 @@ import datetime as dt
 
 from langchain_core.messages import AIMessage
 from langgraph.types import Command
-from sqlalchemy import select
 
 from app.core.db import SessionLocal
 from app.core.logging import get_logger

@@ -68,7 +68,7 @@ def validate(graph: GraphJSON, agents: dict, known_tools: set | None = None) -> 
                 errors.append(ValidationIssue(
                     message=f"edge label '{lbl}' is not a declared branch", edge_id=e.id, node_id=n.id))
         default = n.data.get("default")
-        uncovered = [l for l in labels if l not in out_labels]
+        uncovered = [lab for lab in labels if lab not in out_labels]
         if uncovered and (default is None or default in uncovered):
             errors.append(ValidationIssue(
                 message=f"branches without an outgoing edge: {uncovered}", node_id=n.id))

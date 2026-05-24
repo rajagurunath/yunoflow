@@ -9,7 +9,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import agents, health, runs, templates, tools, workflows, ws
+from app.api import agents, channels, health, runs, templates, tools, workflows, ws
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 
@@ -93,6 +93,7 @@ def create_app() -> FastAPI:
     app.include_router(tools.router)        # /api/tools
     app.include_router(workflows.router)    # /api/workflows
     app.include_router(templates.router)    # /api/templates
+    app.include_router(channels.router)     # /api/channels
     app.include_router(runs.router)         # /api/runs
     app.include_router(ws.router)           # /api/ws/runs/{id}
 

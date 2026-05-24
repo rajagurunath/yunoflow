@@ -12,7 +12,7 @@ Tracks phase gates from `backend-implementation-plan.md`. Each phase ends green 
 | **FRONTEND** (React+ReactFlow per frontend-design.md) | ✅ GREEN | n/a | Vite+React+TS+Tailwind+ReactFlow "Midnight Ledger". Shell+rail; Template Gallery (instantiate); Agent Studio (CRUD + tool picker); Workflow Builder (ReactFlow custom nodes, layered auto-layout, Run) with live WebSocket Monitor (node glow, token/cost HUD, event timeline). Verified live: instantiate→visual graph→Run→real multi-agent LLM→completed, 1154 tok. Served via nginx container (`make up`); node build runs on host (node Docker image fails to exec on this machine). |
 | P5 Differentiators (A2A + DeepAgents, gated) | ⬜ | `P5_GREEN` | droppable bonus (after frontend + P7/P8) |
 | P6 Durability (DBOS, gated) | ⬜ | `P6_GREEN` | droppable |
-| P7 Hardening | ⬜ | `P7_GREEN` | |
+| P7 Hardening | ✅ GREEN | `P7_GREEN` | ruff clean; 14 tests pass; /api/channels CRUD + /status (real bot live). FIXED latent bug: LLM condition nodes defaulted to model gpt-4o-mini → 404 on io.net → always took default branch. Now use settings.llm_model + classify on last human turn. Routing verified both branches (refund→refund, info→faq). |
 | P8 Docs & Demo | ⬜ | `P8_GREEN` | |
 
 ## Resolved versions (P0)
