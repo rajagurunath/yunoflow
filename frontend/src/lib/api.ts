@@ -21,6 +21,8 @@ export const api = {
 
   listWorkflows: () => fetch("/api/workflows").then(j<Workflow[]>),
   getWorkflow: (id: string) => fetch(`/api/workflows/${id}`).then(j<Workflow>),
+  createWorkflow: (w: { name: string; description?: string; graph_json: unknown }) =>
+    post("/api/workflows", w).then(j<Workflow>),
   patchWorkflow: (id: string, graph_json: unknown) =>
     fetch(`/api/workflows/${id}`, {
       method: "PATCH", headers: { "content-type": "application/json" },

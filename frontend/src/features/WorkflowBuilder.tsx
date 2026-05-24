@@ -42,22 +42,62 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [hud, setHud] = useState({ tokens: 0, cost: 0, status: "" });
   const [message, setMessage] = useState("I was charged twice for order #A123 — please refund the duplicate.");
   const [editStatus, setEditStatus] = useState("");
+  const [agents, setAgents] = useState<Agent[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
+  // When connecting out of a condition node, ask for the branch label.
   const onConnect = useCallback((c: Connection) => {
-    setEdges((eds) => addEdge({ ...c, markerEnd: { type: MarkerType.ArrowClosed, color: "#2bf5b8" } }, eds));
-  }, [setEdges]);
+    const src = nodes.find((n) => n.id === c.source);
+    const label = src?.type === "condition"
+      ? (window.prompt("Branch label for this edge (e.g. refund):") || undefined) : undefined;
+    setEdges((eds) => addEdge(
+      { ...c, label, data: label ? { when: label } : {}, markerEnd: { type: MarkerType.ArrowClosed, color: "#2bf5b8" } },
+      eds,
+    ));
+  }, [nodes, setEdges]);
 
-  const serializeGraph = useCallback(() => ({
-    nodes: nodes.map((n) => ({
-      id: n.id, type: n.type, data: n.data?.src ?? {},
-      position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
-    })),
-    edges: edges.map((e) => ({
-      id: e.id, source: e.source, target: e.target,
-      data: e.data ?? {}, label: e.label ?? null,
-    })),
-  }), [nodes, edges]);
+  const addNode = useCallback((type: string, agentId?: string) => {
+    const id = `${type}-${Math.random().toString(36).slice(2, 7)}`;
+    const agent = agentId ? agents.find((a) => a.id === agentId) : undefined;
+    const src: any =
+      type === "agent" || type === "deepagent" ? { agent_id: agentId }
+      : type === "condition" ? { mode: "llm", prompt: "Classify the request.", branches: [], default: null }
+      : {};
+    setNodes((ns) => [...ns, {
+      id, type,
+      position: { x: 140 + (ns.length % 4) * 70, y: 120 + (ns.length % 5) * 60 },
+      data: {
+        label: agent?.name ?? (type === "condition" ? "Route" : type),
+        sub: agent?.model ?? type, status: "idle",
+        branches: type === "condition" ? [] : undefined, src,
+      },
+    }]);
+  }, [agents, setNodes]);
+
+  const serializeGraph = useCallback(() => {
+    // Derive condition branches from the labels on its outgoing edges.
+    const outLabels: Record<string, string[]> = {};
+    edges.forEach((e) => {
+      const l = e.data?.when ?? e.label;
+      if (l) (outLabels[e.source] ||= []).push(String(l));
+    });
+    return {
+      nodes: nodes.map((n) => {
+        let data = n.data?.src ?? {};
+        if (n.type === "condition") {
+          const labels = Array.from(new Set(outLabels[n.id] || (data.branches || []).map((b: any) => b.label)));
+          data = { ...data, mode: data.mode || "llm", prompt: data.prompt || "Classify the request.",
+                   branches: labels.map((l) => ({ label: l })), default: data.default || labels[0] || null };
+        }
+        return { id: n.id, type: n.type, data,
+                 position: { x: Math.round(n.position.x), y: Math.round(n.position.y) } };
+      }),
+      edges: edges.map((e) => ({
+        id: e.id, source: e.source, target: e.target,
+        data: e.data ?? {}, label: e.label ?? null,
+      })),
+    };
+  }, [nodes, edges]);
 
   const save = async () => {
     if (!wf) return;
@@ -85,9 +125,10 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
     (async () => {
       const w = await api.getWorkflow(workflowId);
       const ids = (w.graph_json?.nodes ?? []).filter((n) => n.data?.agent_id).map((n) => n.data.agent_id);
-      const agents = await api.listAgents().catch(() => []);
+      const allAgents = await api.listAgents().catch(() => []);
+      setAgents(allAgents);
       const byId: Record<string, Agent> = {};
-      agents.forEach((a) => { if (ids.includes(a.id)) byId[a.id] = a; });
+      allAgents.forEach((a) => { if (ids.includes(a.id)) byId[a.id] = a; });
       const rf = buildRF(w.graph_json, byId);
       setWf(w); setNodes(rf.nodes); setEdges(rf.edges);
       setEvents([]); setRun(null); setHud({ tokens: 0, cost: 0, status: "" });
@@ -119,8 +160,23 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   if (!workflowId || !wf) {
     return (
       <div className="h-full overflow-auto p-8">
-        <h1 className="font-disp text-2xl font-semibold">Workflows</h1>
-        <p className="mt-1 text-t2">Open a workflow to edit and run it, or create one from a template.</p>
+        <div className="flex items-center justify-between">
+          <h1 className="font-disp text-2xl font-semibold">Workflows</h1>
+          <Button variant="primary" onClick={async () => {
+            const w = await api.createWorkflow({
+              name: `Workflow ${new Date().toISOString().slice(11, 19)}`,
+              graph_json: {
+                nodes: [
+                  { id: "start", type: "start", data: {}, position: { x: 80, y: 220 } },
+                  { id: "end", type: "end", data: {}, position: { x: 640, y: 220 } },
+                ],
+                edges: [],
+              },
+            });
+            onOpen(w.id);
+          }}>＋ New workflow</Button>
+        </div>
+        <p className="mt-1 text-t2">Open a workflow to edit and run it, build one from scratch, or create from a template.</p>
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {workflows.map((w) => (
             <Panel key={w.id} className="cursor-pointer p-4 hover:border-line2" >
@@ -148,9 +204,30 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
           {hud.status && <Pill tone={statusTone(hud.status)}>● {hud.status}</Pill>}
           {editStatus && <span className="font-mono text-[11px] text-t2">{editStatus}</span>}
         </div>
+
+        {/* Add-node palette */}
+        <div className="absolute left-4 top-16 z-10 flex flex-col gap-1.5 rounded-xl border border-line bg-bg2/85 p-2 backdrop-blur">
+          <span className="px-1 font-mono text-[9px] uppercase tracking-wider text-t2">Add node</span>
+          <select
+            value=""
+            onChange={(e) => { if (e.target.value) { addNode("agent", e.target.value); e.currentTarget.value = ""; } }}
+            className="rounded-md border border-line2 bg-bg1 px-2 py-1 text-[11px] text-t0 outline-none">
+            <option value="">＋ Agent…</option>
+            {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          {[["condition", "＋ Condition"], ["tool", "＋ Tool"], ["start", "＋ Start"], ["end", "＋ End"]].map(([t, lbl]) => (
+            <button key={t} onClick={() => addNode(t)}
+              className="rounded-md border border-line2 px-2 py-1 text-left text-[11px] text-t1 hover:bg-bg3 hover:text-t0">
+              {lbl}
+            </button>
+          ))}
+          <span className="px-1 pt-1 font-mono text-[8px] text-t3">⌫ deletes selected</span>
+        </div>
+
         <ReactFlow
           nodes={nodes} edges={edges}
           onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
+          deleteKeyCode={["Backspace", "Delete"]}
           nodeTypes={nodeTypes} fitView proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{ style: { stroke: "rgba(255,255,255,.2)", strokeWidth: 2 } }}>
           <Background variant={BackgroundVariant.Dots} gap={26} size={1.1} color="rgba(255,255,255,.12)" />
