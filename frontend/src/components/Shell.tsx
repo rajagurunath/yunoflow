@@ -5,6 +5,7 @@ const NAV: [View, string, string][] = [
   ["templates", "◆", "Templates"],
   ["studio", "◎", "Agents"],
   ["builder", "⟁", "Workflows"],
+  ["history", "≡", "History"],
 ];
 
 export function Shell({ view, setView, children }: {
