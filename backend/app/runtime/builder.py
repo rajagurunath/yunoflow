@@ -1,5 +1,9 @@
-"""Builds the runnable graph for a workflow: compiled from graph_json, or the
-P1 fixed researcher->writer fallback when the workflow has no nodes yet."""
+"""Builds the runnable graph for a workflow + returns the agents involved.
+
+Compiled from graph_json when it has nodes; otherwise the P1 fixed
+researcher->writer fallback. Returns (graph, agents) so callers can derive
+guardrail limits.
+"""
 from __future__ import annotations
 
 import uuid
@@ -12,10 +16,7 @@ from app.models import Agent
 from app.runtime.compiler import compile_graph
 from app.runtime.fixed_graph import build_fixed_graph
 from app.schemas.graph import GraphJSON
-
-
-def _no_tools(_names):
-    return []
+from app.tools import registry
 
 
 async def build_graph_for_workflow(db, workflow, checkpointer):
@@ -32,11 +33,14 @@ async def build_graph_for_workflow(db, workflow, checkpointer):
                     agent = None
                 if agent:
                     agents[aid] = agent
-        return compile_graph(graph_def, agents=agents, checkpointer=checkpointer,
-                             llm_factory=llm.build_chat_model, tool_resolver=_no_tools)
+        graph = compile_graph(
+            graph_def, agents=agents, checkpointer=checkpointer,
+            llm_factory=llm.build_chat_model, tool_resolver=registry.resolve,
+            known_tools=set(registry.REGISTRY),
+        )
+        return graph, list(agents.values())
 
-    # Fallback: P1 fixed graph from the two oldest agents.
     rows = (await db.execute(select(Agent).order_by(Agent.created_at).limit(2))).scalars().all()
     if len(rows) < 2:
         raise AppError("need at least 2 agents to run", code="insufficient_agents", status_code=422)
-    return build_fixed_graph(rows[0], rows[1], checkpointer)
+    return build_fixed_graph(rows[0], rows[1], checkpointer), list(rows)

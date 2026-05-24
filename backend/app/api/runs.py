@@ -19,6 +19,7 @@ from app.models import Message, Workflow, WorkflowRun
 from app.runtime.builder import build_graph_for_workflow
 from app.runtime.executor import Executor
 from app.schemas.run import MessageRead, ResumeRequest, RunCreate, RunRead
+from app.tools.guardrails import budget_for, recursion_limit_for
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 
@@ -47,7 +48,9 @@ async def create_run(body: RunCreate, request: Request,
     if wf is None:
         wf = await _demo_workflow(db)
 
-    graph = await build_graph_for_workflow(db, wf, executor.cp)
+    graph, agents = await build_graph_for_workflow(db, wf, executor.cp)
+    rlimit = recursion_limit_for(agents)
+    max_tokens, max_cost = budget_for(agents)
 
     run = WorkflowRun(workflow_id=wf.id, status="pending")
     db.add(run)
@@ -58,7 +61,8 @@ async def create_run(body: RunCreate, request: Request,
         "messages": [HumanMessage(content=body.input.message or "")],
         "scratch": dict(body.input.vars or {}),
     }
-    _spawn(request, executor.run(run.id, graph, initial))
+    _spawn(request, executor.run(run.id, graph, initial,
+                                 recursion_limit=rlimit, max_tokens=max_tokens, max_cost=max_cost))
     return run
 
 
@@ -98,6 +102,9 @@ async def resume_run(run_id: uuid.UUID, body: ResumeRequest, request: Request,
     if run is None:
         raise NotFoundError(f"run {run_id} not found")
     wf = await db.get(Workflow, run.workflow_id)
-    graph = await build_graph_for_workflow(db, wf, executor.cp)
-    _spawn(request, executor.resume(run_id, graph, body.value))
+    graph, agents = await build_graph_for_workflow(db, wf, executor.cp)
+    rlimit = recursion_limit_for(agents)
+    max_tokens, max_cost = budget_for(agents)
+    _spawn(request, executor.resume(run_id, graph, body.value,
+                                    recursion_limit=rlimit, max_tokens=max_tokens, max_cost=max_cost))
     return run

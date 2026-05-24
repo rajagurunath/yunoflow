@@ -9,7 +9,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import agents, health, runs, workflows
+from app.api import agents, health, runs, templates, tools, workflows
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 
@@ -41,10 +41,31 @@ async def lifespan(app: FastAPI):
     await manager.start_all(router)
     app.state.channel_manager = manager
 
+    # Scheduler: register cron jobs for agents that have schedule_cron.
+    from sqlalchemy import select
+
+    from app.core.db import SessionLocal
+    from app.models import Agent
+    from app.scheduling import scheduler as sched
+
+    sched.start()
+    async with SessionLocal() as s:
+        scheduled = (await s.execute(select(Agent).where(Agent.schedule_cron.isnot(None)))).scalars().all()
+    for a in scheduled:
+        sched.schedule_agent(a.id, a.schedule_cron)
+
+    # Seed the prebuilt templates (idempotent).
+    from app.templates.seed import seed
+    try:
+        await seed()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("seed.failed", error=str(exc))
+
     try:
         yield
     finally:
         log.info("app.shutdown")
+        sched.shutdown()
         await manager.stop_all()
         await stack.aclose()
 
@@ -63,7 +84,9 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)       # /health, /readyz
     app.include_router(agents.router)       # /api/agents
+    app.include_router(tools.router)        # /api/tools
     app.include_router(workflows.router)    # /api/workflows
+    app.include_router(templates.router)    # /api/templates
     app.include_router(runs.router)         # /api/runs
 
     return app

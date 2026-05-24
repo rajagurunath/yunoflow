@@ -59,10 +59,10 @@ class ChannelRouter:
             waiting = await self._latest_waiting_for_chat(s, m.external_chat_id)
             if waiting is not None:
                 wf = await s.get(Workflow, waiting.workflow_id)
-                graph = await build_graph_for_workflow(s, wf, self.executor.cp)
+                graph, _ = await build_graph_for_workflow(s, wf, self.executor.cp)
             else:
                 wf = await self._demo_workflow(s)
-                graph = await build_graph_for_workflow(s, wf, self.executor.cp)
+                graph, _ = await build_graph_for_workflow(s, wf, self.executor.cp)
                 wf_id = wf.id
 
         if waiting is not None:

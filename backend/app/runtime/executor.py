@@ -47,16 +47,23 @@ class Executor:
         self.cp = checkpointer
         self.sf = session_factory
 
-    async def run(self, run_id, graph, initial_input, on_reply=None) -> str:
+    async def run(self, run_id, graph, initial_input, on_reply=None, *,
+                  recursion_limit: int = 25, max_tokens: int | None = None,
+                  max_cost: float | None = None) -> str:
         await self._set_status(run_id, "running", started=True)
-        return await self._stream(run_id, graph, initial_input, on_reply)
+        return await self._stream(run_id, graph, initial_input, on_reply,
+                                  recursion_limit, max_tokens, max_cost)
 
-    async def resume(self, run_id, graph, value, on_reply=None) -> str:
+    async def resume(self, run_id, graph, value, on_reply=None, *,
+                     recursion_limit: int = 25, max_tokens: int | None = None,
+                     max_cost: float | None = None) -> str:
         await self._set_status(run_id, "running")
-        return await self._stream(run_id, graph, Command(resume=value), on_reply)
+        return await self._stream(run_id, graph, Command(resume=value), on_reply,
+                                  recursion_limit, max_tokens, max_cost)
 
-    async def _stream(self, run_id, graph, inp, on_reply) -> str:
-        cfg = {"configurable": {"thread_id": str(run_id)}}
+    async def _stream(self, run_id, graph, inp, on_reply,
+                      recursion_limit=25, max_tokens=None, max_cost=None) -> str:
+        cfg = {"configurable": {"thread_id": str(run_id)}, "recursion_limit": recursion_limit}
         final_text: str | None = None
         total_tokens = 0
         total_cost = 0.0
@@ -86,6 +93,12 @@ class Executor:
                             total_tokens += tt
                             total_cost += cost
                             final_text = content
+                            if (max_tokens and total_tokens > max_tokens) or (
+                                max_cost and total_cost > max_cost
+                            ):
+                                await self._finalize(run_id, "failed", total_tokens, total_cost,
+                                                     error="budget_exceeded")
+                                return "failed"
                         else:
                             await self._persist(run_id, _role_of(msg), content, node_id=node_id)
 
@@ -107,9 +120,11 @@ class Executor:
                 await on_reply(final_text)
             return "completed"
         except Exception as exc:  # noqa: BLE001
+            # Includes GraphRecursionError (max_steps guardrail). Record + stop;
+            # background tasks must not crash the event loop.
             log.error("executor.failed", run_id=str(run_id), error=str(exc))
             await self._finalize(run_id, "failed", total_tokens, total_cost, error=str(exc))
-            raise
+            return "failed"
 
     # --- persistence helpers (own sessions; executor runs outside request scope) ---
 

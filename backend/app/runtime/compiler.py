@@ -95,9 +95,10 @@ def validate(graph: GraphJSON, agents: dict, known_tools: set | None = None) -> 
 
 
 def compile_graph(graph: GraphJSON, *, agents: dict, checkpointer,
-                  llm_factory=None, tool_resolver=None, dry_run: bool = False):
+                  llm_factory=None, tool_resolver=None, known_tools: set | None = None,
+                  dry_run: bool = False):
     """Validate then (unless dry_run) build a compiled StateGraph."""
-    result = validate(graph, agents)
+    result = validate(graph, agents, known_tools)
     if dry_run:
         return result
     if not result.ok:
@@ -114,7 +115,7 @@ def compile_graph(graph: GraphJSON, *, agents: dict, checkpointer,
         if n.type in ("start", "end"):
             continue
         if n.type == "agent":
-            builder.add_node(n.id, make_agent_node(agents[n.data["agent_id"]], llm_factory))
+            builder.add_node(n.id, make_agent_node(agents[n.data["agent_id"]], llm_factory, tool_resolver))
         elif n.type == "condition":
             builder.add_node(n.id, make_condition_node(n.data, llm_factory))
         elif n.type == "tool":

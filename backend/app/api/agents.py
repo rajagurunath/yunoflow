@@ -11,6 +11,7 @@ from app.api.deps import get_db
 from app.core.errors import NotFoundError
 from app.models import Agent
 from app.schemas.agent import AgentCreate, AgentRead, AgentUpdate
+from app.scheduling import scheduler as sched
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 
@@ -27,6 +28,8 @@ async def create_agent(body: AgentCreate, db: AsyncSession = Depends(get_db)):
     db.add(agent)
     await db.commit()
     await db.refresh(agent)
+    if agent.schedule_cron:
+        sched.schedule_agent(agent.id, agent.schedule_cron)
     return agent
 
 
@@ -47,6 +50,10 @@ async def update_agent(agent_id: uuid.UUID, body: AgentUpdate, db: AsyncSession 
         setattr(agent, key, value)
     await db.commit()
     await db.refresh(agent)
+    if agent.schedule_cron:
+        sched.schedule_agent(agent.id, agent.schedule_cron)
+    else:
+        sched.unschedule_agent(agent.id)
     return agent
 
 
@@ -57,3 +64,4 @@ async def delete_agent(agent_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
         raise NotFoundError(f"agent {agent_id} not found")
     await db.delete(agent)
     await db.commit()
+    sched.unschedule_agent(agent_id)
