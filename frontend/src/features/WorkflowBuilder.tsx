@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Background, BackgroundVariant, Controls, MarkerType, ReactFlow,
+  addEdge, Background, BackgroundVariant, Controls, type Connection, MarkerType, ReactFlow,
   useEdgesState, useNodesState,
 } from "@xyflow/react";
 import { api, openRunSocket } from "../lib/api";
@@ -18,8 +18,11 @@ function buildRF(graph: GraphJSON, agentsById: Record<string, Agent>) {
       ?? (n.type === "condition" ? "Route" : n.type === "start" ? "start" : n.type === "end" ? "end" : n.id);
     const sub = agent ? agent.model : n.type === "condition" ? (n.data?.mode ?? "router") : n.type;
     const branches = n.type === "condition" ? (n.data?.branches || []).map((b: any) => b.label) : undefined;
-    return { id: n.id, type: n.type, position: pos[n.id] || { x: 0, y: 0 },
-             data: { label, sub, status: "idle", branches } };
+    // Honor a saved position if present, else fall back to auto-layout.
+    const position = n.position && typeof n.position.x === "number" ? n.position : (pos[n.id] || { x: 0, y: 0 });
+    // Preserve the source node data (agent_id, condition config) so we can serialize back on Save.
+    return { id: n.id, type: n.type, position,
+             data: { label, sub, status: "idle", branches, src: n.data ?? {} } };
   });
   const edges = g.edges.map((e) => ({
     id: e.id, source: e.source, target: e.target,
@@ -38,7 +41,42 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [events, setEvents] = useState<WSEvent[]>([]);
   const [hud, setHud] = useState({ tokens: 0, cost: 0, status: "" });
   const [message, setMessage] = useState("I was charged twice for order #A123 — please refund the duplicate.");
+  const [editStatus, setEditStatus] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
+
+  const onConnect = useCallback((c: Connection) => {
+    setEdges((eds) => addEdge({ ...c, markerEnd: { type: MarkerType.ArrowClosed, color: "#2bf5b8" } }, eds));
+  }, [setEdges]);
+
+  const serializeGraph = useCallback(() => ({
+    nodes: nodes.map((n) => ({
+      id: n.id, type: n.type, data: n.data?.src ?? {},
+      position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
+    })),
+    edges: edges.map((e) => ({
+      id: e.id, source: e.source, target: e.target,
+      data: e.data ?? {}, label: e.label ?? null,
+    })),
+  }), [nodes, edges]);
+
+  const save = async () => {
+    if (!wf) return;
+    setEditStatus("saving…");
+    try {
+      await api.patchWorkflow(wf.id, serializeGraph());
+      setEditStatus("saved ✓");
+    } catch (err) {
+      setEditStatus(`save failed: ${err}`);
+    }
+  };
+
+  const validate = async () => {
+    if (!wf) return;
+    setEditStatus("validating…");
+    await api.patchWorkflow(wf.id, serializeGraph());           // validate what's on screen
+    const r = await api.validateWorkflow(wf.id);
+    setEditStatus(r.ok ? "valid ✓" : `${r.errors.length} error(s): ${r.errors.map((e: any) => e.message).join("; ")}`);
+  };
 
   useEffect(() => { api.listWorkflows().then(setWorkflows).catch(() => {}); }, [run]);
 
@@ -105,11 +143,14 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
           <input value={message} onChange={(e) => setMessage(e.target.value)}
             className="w-96 rounded-lg border border-line2 bg-bg1/90 px-3 py-1.5 text-sm outline-none focus:border-mint/50" />
           <Button variant="primary" onClick={start} disabled={hud.status === "running"}>▶ Run</Button>
+          <Button onClick={save}>Save</Button>
+          <Button onClick={validate}>Validate</Button>
           {hud.status && <Pill tone={statusTone(hud.status)}>● {hud.status}</Pill>}
+          {editStatus && <span className="font-mono text-[11px] text-t2">{editStatus}</span>}
         </div>
         <ReactFlow
           nodes={nodes} edges={edges}
-          onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+          onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
           nodeTypes={nodeTypes} fitView proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{ style: { stroke: "rgba(255,255,255,.2)", strokeWidth: 2 } }}>
           <Background variant={BackgroundVariant.Dots} gap={26} size={1.1} color="rgba(255,255,255,.12)" />
