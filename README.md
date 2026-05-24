@@ -15,14 +15,19 @@ Telegram → every message, token and cost streams to a live monitor.
 
 ## Demo
 
+![Demo](docs/demo.gif)
+
+*The flow above (captured live): Templates → instantiate Payments Support Triage →
+visual workflow → Run → the triage agent classifies and routes to the refund
+branch → live monitor streams tokens/cost/messages → run completes → browse the
+persisted transcript in History.*
+
 | Templates → one click to a multi-agent workflow | Live run (WebSocket monitor) |
 |---|---|
 | ![Templates](docs/screenshots/templates.png) | ![Live run](docs/screenshots/live-run.png) |
 
-**Recorded walkthrough:** `docs/demo.gif` *(record: open the UI, instantiate the
-Payments Support Triage template, send a refund message — watch it route to the
-refund branch and resolve with the AP2 mock; then send the same to the Telegram
-bot and watch the human-in-the-loop resume).*
+> For the scheduled live session, a narrated screen recording also showing the
+> **Telegram** human-in-the-loop resume is the natural companion to this gif.
 
 **End-to-end verified live** (real io.net model): instantiate template → compiled
 graph with a feedback loop → Run → multi-agent execution → completed (1,154 tokens,
