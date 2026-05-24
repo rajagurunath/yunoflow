@@ -32,6 +32,33 @@ function buildRF(graph: GraphJSON, agentsById: Record<string, Agent>) {
   return { nodes, edges };
 }
 
+const DOT: Record<string, string> = {
+  mint: "bg-mint", cyan: "bg-cyan", amber: "bg-amber", coral: "bg-coral", t2: "bg-t3",
+};
+
+// Turn a raw WS event into a human-readable activity-log line.
+function describeEvent(e: WSEvent): { icon: string; title: string; detail?: string; tone: string } {
+  const node = e.data?.node_id;
+  switch (e.type) {
+    case "run_started": return { icon: "▶", title: "Run started", tone: "mint" };
+    case "node_exit": return { icon: "✓", title: `Step finished${node ? ` — ${node}` : ""}`, tone: "t2" };
+    case "agent_message":
+      return { icon: "💬", title: `${node || "agent"} replied`, detail: e.data?.content, tone: "mint" };
+    case "tool_call": return { icon: "⚒", title: `${node || "agent"} called ${e.data?.name}`, detail: JSON.stringify(e.data?.args ?? {}), tone: "cyan" };
+    case "token_usage":
+      return {
+        icon: "◷", title: `${node || ""} used ${e.data?.total_tokens} tokens`,
+        detail: `$${Number(e.data?.cost_usd || 0).toFixed(5)} · running total ${Number(e.data?.cumulative_tokens || 0).toLocaleString()} tok / $${Number(e.data?.cumulative_cost_usd || 0).toFixed(5)}`,
+        tone: "cyan",
+      };
+    case "interrupt": return { icon: "⏸", title: "Waiting for human input", detail: e.data?.value, tone: "amber" };
+    case "run_completed":
+      return { icon: "✓", title: "Run completed", detail: `${Number(e.data?.total_tokens || 0).toLocaleString()} tokens · $${Number(e.data?.total_cost_usd || 0).toFixed(5)}`, tone: "mint" };
+    case "error": return { icon: "✕", title: "Error", detail: e.data?.message, tone: "coral" };
+    default: return { icon: "·", title: e.type, tone: "t2" };
+  }
+}
+
 export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | null; onOpen: (id: string) => void }) {
   const [wf, setWf] = useState<Workflow | null>(null);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -43,6 +70,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [message, setMessage] = useState("I was charged twice for order #A123 — please refund the duplicate.");
   const [editStatus, setEditStatus] = useState("");
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [monitor, setMonitor] = useState<"normal" | "wide" | "closed">("normal");
   const wsRef = useRef<WebSocket | null>(null);
 
   // When connecting out of a condition node, ask for the branch label.
@@ -142,6 +170,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
 
   const start = async () => {
     if (!wf) return;
+    setMonitor((m) => (m === "closed" ? "normal" : m)); // make sure the log is visible
     setEvents([]); setHud({ tokens: 0, cost: 0, status: "running" });
     setNodes((ns) => ns.map((n) => ({ ...n, data: { ...n.data, status: "idle" } })));
     const r = await api.createRun(wf.id, message);
@@ -192,9 +221,9 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   }
 
   return (
-    <div className="grid h-full grid-cols-[1fr_380px] overflow-hidden">
-      <div className="relative">
-        <div className="absolute left-4 top-4 z-10 flex items-center gap-3">
+    <div className="flex h-full overflow-hidden">
+      <div className="relative min-w-0 flex-1">
+        <div className="absolute left-4 top-4 z-10 flex flex-wrap items-center gap-2">
           <span className="font-disp text-sm">{wf.name}</span>
           <input value={message} onChange={(e) => setMessage(e.target.value)}
             className="w-96 rounded-lg border border-line2 bg-bg1/90 px-3 py-1.5 text-sm outline-none focus:border-mint/50" />
@@ -233,29 +262,66 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
           <Background variant={BackgroundVariant.Dots} gap={26} size={1.1} color="rgba(255,255,255,.12)" />
           <Controls showInteractive={false} />
         </ReactFlow>
+
+        {monitor === "closed" && (
+          <button onClick={() => setMonitor("normal")}
+            className="absolute right-3 top-3 z-10 rounded-lg border border-line2 bg-bg2/90 px-3 py-1.5 text-xs text-t1 backdrop-blur hover:text-t0">
+            ⠿ Show activity log
+          </button>
+        )}
       </div>
 
-      <Panel className="m-3 flex min-h-0 flex-col overflow-hidden">
-        <div className="border-b border-line px-4 py-3 font-mono text-[11px] uppercase tracking-widest text-t2">⠿ Live Monitor</div>
-        <div className="grid grid-cols-2 gap-3 px-4 py-3">
-          <div><div className="font-mono text-[11px] text-t2">tokens</div><div className="font-mono text-lg text-mint">{hud.tokens.toLocaleString()}</div></div>
-          <div><div className="font-mono text-[11px] text-t2">cost</div><div className="font-mono text-lg text-mint">${hud.cost.toFixed(4)}</div></div>
-        </div>
-        <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
-          <div className="relative border-l border-line2 pl-4">
-            {events.filter((e) => e.type !== "node_exit").map((e, i) => (
-              <div key={i} className="relative py-2">
-                <span className="absolute -left-[21px] top-3 h-2 w-2 rounded-full bg-mint" />
-                <div className="font-mono text-[10px] text-t2">{e.type} · {e.data?.node_id || ""}</div>
-                {e.data?.content && <div className="mt-0.5 text-[12.5px] text-t1">{String(e.data.content).slice(0, 220)}</div>}
-                {e.type === "token_usage" && <div className="font-mono text-[10px] text-t3">{e.data.total_tokens} tok · ${Number(e.data.cost_usd).toFixed(5)}</div>}
-                {e.type === "interrupt" && <div className="mt-0.5 text-[12.5px] text-amber">{e.data.value}</div>}
-              </div>
-            ))}
-            {events.length === 0 && <div className="py-2 text-sm text-t2">Press Run to stream live agent activity.</div>}
+      {monitor !== "closed" && (
+        <Panel style={{ width: monitor === "wide" ? 720 : 400 }}
+          className="m-3 flex min-h-0 shrink-0 flex-col overflow-hidden">
+          <header className="flex items-center gap-2 border-b border-line px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <div className="font-disp text-sm">Live Activity Log</div>
+              <div className="font-mono text-[10px] text-t2">agent replies · tool calls · tokens · cost — streamed live over WebSocket</div>
+            </div>
+            <button title={monitor === "wide" ? "Shrink panel" : "Expand panel"}
+              onClick={() => setMonitor(monitor === "wide" ? "normal" : "wide")}
+              className="rounded-md border border-line2 px-2 py-1 text-[11px] text-t1 hover:bg-bg3 hover:text-t0">
+              {monitor === "wide" ? "⤡ Shrink" : "⤢ Expand"}
+            </button>
+            <button title="Hide panel" onClick={() => setMonitor("closed")}
+              className="rounded-md border border-line2 px-2 py-1 text-[11px] text-t1 hover:text-coral">✕</button>
+          </header>
+
+          <div className="grid grid-cols-3 gap-2 border-b border-line px-4 py-3">
+            <div><div className="font-mono text-[10px] text-t2">status</div><div className="font-mono text-sm text-mint">{hud.status || "idle"}</div></div>
+            <div><div className="font-mono text-[10px] text-t2">tokens</div><div className="font-mono text-sm text-mint">{hud.tokens.toLocaleString()}</div></div>
+            <div><div className="font-mono text-[10px] text-t2">cost</div><div className="font-mono text-sm text-mint">${hud.cost.toFixed(4)}</div></div>
           </div>
-        </div>
-      </Panel>
+
+          <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
+            {events.length === 0 ? (
+              <div className="mt-6 text-center text-sm text-t2">
+                <div className="text-2xl">⠿</div>
+                <p className="mt-2">Press <span className="text-mint">▶ Run</span> to watch agents work here —<br />
+                  each message, tool call, token and cost appears live.</p>
+              </div>
+            ) : (
+              <div className="relative border-l border-line2 pl-4">
+                {events.map((e, i) => {
+                  const d = describeEvent(e);
+                  return (
+                    <div key={i} className="relative py-2">
+                      <span className={`absolute -left-[21px] top-2.5 h-2.5 w-2.5 rounded-full ${DOT[d.tone] || "bg-t3"}`} />
+                      <div className="text-[12.5px] font-medium text-t0">{d.icon} {d.title}</div>
+                      {d.detail && (
+                        <div className="mt-0.5 whitespace-pre-wrap break-words text-[12px] text-t1">
+                          {String(d.detail).slice(0, monitor === "wide" ? 600 : 240)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Panel>
+      )}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import React from "react";
 
-export function Panel({ className = "", children }: { className?: string; children: React.ReactNode }) {
+export function Panel({ className = "", children, style }: {
+  className?: string; children: React.ReactNode; style?: React.CSSProperties;
+}) {
   return (
-    <div className={`rounded-2xl border border-line bg-bg2/70 backdrop-blur-md ${className}`}>
+    <div style={style} className={`rounded-2xl border border-line bg-bg2/70 backdrop-blur-md ${className}`}>
       {children}
     </div>
   );
