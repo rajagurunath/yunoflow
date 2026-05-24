@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     llm_price_in: float = 0.00015
     llm_price_out: float = 0.0006
 
+    # Console auth (gates the web console; landing page stays public)
+    auth_username: str = "admin"
+    auth_password: str = "orchestra"
+
     # Channels
     telegram_bot_token: str = ""
 

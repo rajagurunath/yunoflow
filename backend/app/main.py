@@ -9,7 +9,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import a2a, agents, channels, health, runs, templates, tools, workflows, ws
+from app.api import a2a, agents, auth, channels, health, runs, templates, tools, workflows, ws
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 
@@ -94,6 +94,7 @@ def create_app() -> FastAPI:
     install_error_handlers(app)
 
     app.include_router(health.router)       # /health, /readyz
+    app.include_router(auth.router)         # /api/auth/login
     app.include_router(agents.router)       # /api/agents
     app.include_router(tools.router)        # /api/tools
     app.include_router(workflows.router)    # /api/workflows

@@ -10,8 +10,8 @@ const NAV: [View, string, string, string][] = [
   ["channels", "✈", "Channels", "Connect Telegram"],
 ];
 
-export function Shell({ view, setView, children }: {
-  view: View; setView: (v: View) => void; children: React.ReactNode;
+export function Shell({ view, setView, children, onSignOut }: {
+  view: View; setView: (v: View) => void; children: React.ReactNode; onSignOut?: () => void;
 }) {
   return (
     <div className="bg-atmos relative flex h-screen">
@@ -42,8 +42,15 @@ export function Shell({ view, setView, children }: {
           </button>
         ))}
 
-        <div className="mt-auto px-2 font-mono text-[9px] leading-relaxed text-t3">
-          API :8000 · UI :5173
+        <div className="mt-auto flex flex-col gap-2">
+          {onSignOut && (
+            <button onClick={onSignOut}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-t2 transition hover:bg-bg3 hover:text-coral">
+              <span className="w-4 text-center text-base leading-none">⎋</span>
+              <span className="text-sm font-medium">Sign out</span>
+            </button>
+          )}
+          <div className="px-2 font-mono text-[9px] leading-relaxed text-t3">API :8000 · UI :5173</div>
         </div>
       </nav>
 
