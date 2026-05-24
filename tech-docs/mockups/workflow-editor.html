@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orchestra · Workflow Editor — Midnight Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   ORCHESTRA — "Midnight Ledger" design system
+   Self-contained mockup of the signature Workflow Editor screen.
+   No build step, no deps. Open in a browser.
+   ============================================================ */
+:root{
+  /* surfaces */
+  --bg-0:#07090d; --bg-1:#0a0e15; --bg-2:#0e131c; --bg-3:#141b27; --bg-4:#1a2433;
+  /* lines */
+  --line:rgba(255,255,255,.065); --line-2:rgba(255,255,255,.12); --line-3:rgba(255,255,255,.2);
+  /* text */
+  --t0:#eaf0f7; --t1:#9babbf; --t2:#64768b; --t3:#3f4d5e;
+  /* accents */
+  --mint:#2bf5b8; --mint-2:#16c795; --mint-dim:#0e8a68;
+  --cyan:#38d6ff; --amber:#ffc15e; --coral:#ff6b72; --gold:#e8c07d;
+  --grad:linear-gradient(135deg,var(--cyan),var(--mint));
+  --glow:0 0 0 1px rgba(43,245,184,.25),0 0 28px rgba(43,245,184,.28);
+  --radius:14px; --radius-sm:9px;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --body:'Satoshi',-apple-system,system-ui,sans-serif;
+  --disp:'Clash Display','Satoshi',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--body); color:var(--t0); background:var(--bg-0);
+  overflow:hidden; -webkit-font-smoothing:antialiased; letter-spacing:.1px;
+}
+/* atmospheric background: drifting glow + grid + grain */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg::before{ /* drifting radial glows */
+  content:"";position:absolute;inset:-20%;
+  background:
+    radial-gradient(40% 50% at 22% 18%,rgba(56,214,255,.10),transparent 60%),
+    radial-gradient(45% 55% at 82% 78%,rgba(43,245,184,.10),transparent 60%),
+    radial-gradient(35% 40% at 60% 30%,rgba(120,90,255,.05),transparent 60%);
+  animation:drift 26s ease-in-out infinite alternate;
+}
+.bg::after{ /* hairline grid */
+  content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:46px 46px; mask-image:radial-gradient(120% 120% at 50% 40%,#000 55%,transparent 100%);
+}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+@keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(2%,-2%,0) scale(1.06)}}
+
+/* ============ layout ============ */
+.app{
+  position:relative;z-index:2;height:100vh;display:grid;
+  grid-template-columns:62px 230px 1fr 348px;
+  grid-template-rows:54px 1fr 132px;
+  grid-template-areas:
+    "top top top top"
+    "rail palette canvas inspect"
+    "rail console console inspect";
+}
+
+/* ============ top bar ============ */
+.top{grid-area:top;display:flex;align-items:center;gap:18px;padding:0 18px;
+  background:linear-gradient(180deg,rgba(14,19,28,.92),rgba(10,14,21,.78));
+  border-bottom:1px solid var(--line);backdrop-filter:blur(14px);
+  animation:slideDown .6s cubic-bezier(.2,.8,.2,1) both;}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:26px;height:26px;border-radius:8px;background:var(--grad);position:relative;
+  box-shadow:var(--glow);display:grid;place-items:center}
+.mark::after{content:"";width:11px;height:11px;border:2px solid #04110d;transform:rotate(45deg);border-radius:2px}
+.brand b{font-family:var(--disp);font-weight:600;font-size:16px;letter-spacing:.4px}
+.brand .by{font-size:10px;color:var(--t2);font-family:var(--mono);border:1px solid var(--line-2);
+  padding:2px 6px;border-radius:20px;letter-spacing:1px;text-transform:uppercase}
+.crumbs{display:flex;align-items:center;gap:8px;color:var(--t2);font-size:13px;margin-left:8px}
+.crumbs .cur{color:var(--t0);font-weight:500}
+.top .spacer{flex:1}
+.hud{font-family:var(--mono);font-size:12px;color:var(--t1);display:flex;gap:14px;align-items:center}
+.hud b{color:var(--mint)}
+.hud .div{width:1px;height:16px;background:var(--line-2)}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);
+  padding:5px 11px;border-radius:30px;border:1px solid var(--line-2);color:var(--t1)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 10px var(--mint);animation:pulse 1.4s infinite}
+.btn-run{display:inline-flex;align-items:center;gap:8px;font-family:var(--body);font-weight:700;font-size:13px;
+  color:#04110d;background:var(--grad);border:none;padding:9px 18px;border-radius:10px;cursor:pointer;
+  box-shadow:var(--glow);transition:transform .15s,box-shadow .15s}
+.btn-run:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(43,245,184,.4),0 6px 30px rgba(43,245,184,.45)}
+.av{width:30px;height:30px;border-radius:50%;background:conic-gradient(from 200deg,var(--cyan),var(--mint),var(--gold),var(--cyan));
+  border:1px solid var(--line-2)}
+
+/* ============ icon rail ============ */
+.rail{grid-area:rail;background:linear-gradient(180deg,var(--bg-2),var(--bg-1));border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;
+  animation:fadeIn .8s ease both}
+.rail a{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:var(--t2);
+  position:relative;transition:.18s;cursor:pointer}
+.rail a svg{width:20px;height:20px}
+.rail a:hover{color:var(--t0);background:var(--bg-3)}
+.rail a.on{color:var(--mint);background:rgba(43,245,184,.08)}
+.rail a.on::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--mint);box-shadow:0 0 12px var(--mint)}
+.rail .grow{flex:1}
+
+/* ============ panels (glass) ============ */
+.panel{background:linear-gradient(180deg,rgba(20,27,39,.72),rgba(14,19,28,.72));
+  backdrop-filter:blur(16px);border:1px solid var(--line)}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;
+  font-family:var(--mono);font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--t2)}
+.phead .k{display:flex;align-items:center;gap:8px}
+
+/* ============ palette ============ */
+.palette{grid-area:palette;border-right:1px solid var(--line);overflow-y:auto;
+  animation:slideRight .7s cubic-bezier(.2,.8,.2,1) both}
+.search{margin:0 14px 12px;display:flex;align-items:center;gap:8px;background:var(--bg-1);
+  border:1px solid var(--line);border-radius:9px;padding:8px 11px;color:var(--t2);font-size:12.5px}
+.search input{background:none;border:none;color:var(--t0);font-family:var(--body);outline:none;width:100%}
+.pgroup{padding:6px 14px 4px;font-family:var(--mono);font-size:10px;letter-spacing:1.2px;color:var(--t3);text-transform:uppercase}
+.ncard{margin:6px 12px;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--bg-2);
+  display:flex;align-items:center;gap:11px;cursor:grab;transition:.16s;position:relative}
+.ncard:hover{border-color:var(--line-3);transform:translateY(-1px);background:var(--bg-3)}
+.ncard .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:none}
+.ncard .ti{font-weight:600;font-size:13px}
+.ncard .su{font-size:11px;color:var(--t2);margin-top:1px}
+.ic.agent{background:rgba(43,245,184,.12);color:var(--mint)}
+.ic.tool{background:rgba(56,214,255,.12);color:var(--cyan)}
+.ic.cond{background:rgba(255,193,94,.12);color:var(--amber)}
+.ic.chan{background:rgba(232,192,125,.12);color:var(--gold)}
+.ic.deep{background:linear-gradient(135deg,rgba(56,214,255,.2),rgba(43,245,184,.2));color:#cffaf0}
+
+/* ============ canvas ============ */
+.canvas{grid-area:canvas;position:relative;overflow:hidden;background:
+  radial-gradient(100% 100% at 50% 0%,rgba(20,27,39,.4),transparent 70%);}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.10) 1.1px,transparent 1.1px);
+  background-size:26px 26px;mask-image:radial-gradient(130% 120% at 50% 45%,#000 50%,transparent 100%)}
+.canvas-tools{position:absolute;top:14px;left:14px;display:flex;gap:6px;z-index:5}
+.ct{background:var(--bg-2);border:1px solid var(--line);border-radius:8px;color:var(--t1);font-size:12px;
+  padding:6px 9px;font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.minimap{position:absolute;right:14px;bottom:14px;width:148px;height:92px;border-radius:10px;z-index:5;
+  border:1px solid var(--line-2);background:rgba(7,9,13,.7);overflow:hidden}
+.minimap i{position:absolute;border-radius:3px;background:rgba(43,245,184,.5)}
+
+svg.wires{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible}
+.wire{fill:none;stroke:var(--line-3);stroke-width:2}
+.wire.flow{stroke:url(#g1);stroke-width:2.4;stroke-dasharray:7 9;animation:march 1s linear infinite;
+  filter:drop-shadow(0 0 6px rgba(43,245,184,.5))}
+.wire.loop{stroke:var(--amber);stroke-width:2;stroke-dasharray:3 7;opacity:.8}
+.elabel{font-family:var(--mono);font-size:10.5px;fill:var(--t1)}
+.elabel.bg{fill:var(--bg-1);stroke:var(--line);stroke-width:.5}
+
+/* nodes on canvas */
+.node{position:absolute;z-index:3;width:194px;border-radius:14px;border:1px solid var(--line-2);
+  background:linear-gradient(180deg,var(--bg-3),var(--bg-2));padding:0;cursor:pointer;
+  box-shadow:0 12px 30px rgba(0,0,0,.45);transition:transform .16s,border-color .16s;
+  animation:nodeIn .6s cubic-bezier(.2,.8,.2,1) both}
+.node:hover{transform:translateY(-2px);border-color:var(--line-3)}
+.node .nh{display:flex;align-items:center;gap:9px;padding:11px 12px 9px}
+.node .nav{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;font-family:var(--disp);font-weight:600;font-size:13px}
+.node .nm b{font-family:var(--disp);font-weight:600;font-size:13.5px;display:block;line-height:1.1}
+.node .nm span{font-size:10.5px;color:var(--t2);font-family:var(--mono)}
+.node .nb{padding:0 12px 11px;font-size:11.5px;color:var(--t1);line-height:1.45}
+.node .nf{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);
+  padding:8px 12px;font-family:var(--mono);font-size:10.5px;color:var(--t2)}
+.node .chips{display:flex;gap:5px}
+.chip{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:6px;border:1px solid var(--line);color:var(--t1);background:var(--bg-1)}
+.port{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--bg-4);border:2px solid var(--line-3);z-index:4}
+.port.in{left:-6px;top:50%;transform:translateY(-50%)}
+.port.out{right:-6px;top:50%;transform:translateY(-50%)}
+.port.live{background:var(--mint);border-color:var(--mint);box-shadow:0 0 10px var(--mint)}
+
+/* node states */
+.node.running{border-color:rgba(43,245,184,.55);box-shadow:0 0 0 1px rgba(43,245,184,.45),0 0 34px rgba(43,245,184,.30),0 12px 30px rgba(0,0,0,.5)}
+.node.running .nav{box-shadow:0 0 0 0 rgba(43,245,184,.5);animation:ring 1.6s infinite}
+.node.done{border-color:rgba(43,245,184,.25)}
+.node.wait{border-color:rgba(255,193,94,.5);box-shadow:0 0 0 1px rgba(255,193,94,.3),0 0 26px rgba(255,193,94,.18),0 12px 30px rgba(0,0,0,.5)}
+.nav.agent{background:rgba(43,245,184,.14);color:var(--mint)}
+.nav.cond{background:rgba(255,193,94,.14);color:var(--amber)}
+.nav.chan{background:rgba(232,192,125,.14);color:var(--gold)}
+.nav.deep{background:linear-gradient(135deg,rgba(56,214,255,.25),rgba(43,245,184,.25));color:#dffcf3}
+.statetag{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;padding:2px 7px;border-radius:20px}
+.statetag.run{color:var(--mint);background:rgba(43,245,184,.1)}
+.statetag.idle{color:var(--t2);background:var(--bg-1)}
+.statetag.ok{color:var(--mint-2);background:rgba(22,199,149,.1)}
+.statetag.wait{color:var(--amber);background:rgba(255,193,94,.1)}
+.node.sel{border-color:var(--mint);box-shadow:0 0 0 1px var(--mint),0 0 34px rgba(43,245,184,.25)}
+
+/* condition node (diamond-ish) */
+.node.condition{width:150px}
+.node.condition .nb{display:flex;gap:8px}
+.branch{flex:1;text-align:center;border:1px dashed var(--line-2);border-radius:8px;padding:5px 0;font-family:var(--mono);font-size:10.5px;color:var(--t1)}
+
+/* ============ inspector ============ */
+.inspect{grid-area:inspect;border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;
+  animation:slideLeft .7s cubic-bezier(.2,.8,.2,1) both}
+.tabs{display:flex;gap:4px;padding:12px 14px 0}
+.tab{flex:1;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.8px;text-transform:uppercase;
+  padding:9px 0;color:var(--t2);border-radius:9px 9px 0 0;cursor:pointer;border:1px solid transparent;border-bottom:none}
+.tab.on{color:var(--mint);background:linear-gradient(180deg,rgba(43,245,184,.08),transparent);border-color:var(--line)}
+.ibody{flex:1;overflow-y:auto;padding:14px}
+.view{display:none} .view.on{display:block}
+
+.agenthead{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg-2);margin-bottom:14px}
+.agenthead .av2{width:42px;height:42px;border-radius:12px;background:rgba(43,245,184,.14);color:var(--mint);display:grid;place-items:center;font-family:var(--disp);font-weight:600}
+.agenthead b{font-family:var(--disp);font-size:15px}
+.agenthead span{font-size:11.5px;color:var(--t2);font-family:var(--mono)}
+
+.acc{border:1px solid var(--line);border-radius:11px;margin-bottom:9px;overflow:hidden;background:var(--bg-2)}
+.acc>summary{list-style:none;cursor:pointer;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;
+  font-weight:600;font-size:12.5px}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .n{font-family:var(--mono);font-size:10px;color:var(--mint);border:1px solid rgba(43,245,184,.3);border-radius:20px;padding:1px 7px}
+.acc .ac-body{padding:4px 13px 14px;border-top:1px solid var(--line)}
+.field{margin-top:11px}
+.field label{display:block;font-size:11px;color:var(--t2);margin-bottom:5px;font-family:var(--mono);letter-spacing:.4px}
+.input,.selectish{width:100%;background:var(--bg-1);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;color:var(--t0);font-family:var(--body);font-size:12.5px}
+.selectish{display:flex;align-items:center;justify-content:space-between;color:var(--t0)}
+.row{display:flex;gap:8px} .row>*{flex:1}
+.slider{height:5px;border-radius:5px;background:var(--bg-1);position:relative;margin-top:10px}
+.slider i{position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:5px;background:var(--grad)}
+.slider b{position:absolute;left:62%;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 10px rgba(43,245,184,.6)}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tchip{font-family:var(--mono);font-size:10.5px;padding:4px 9px;border-radius:7px;border:1px solid var(--line-2);color:var(--t1);background:var(--bg-1)}
+.tchip.on{color:var(--mint);border-color:rgba(43,245,184,.4);background:rgba(43,245,184,.08)}
+.toggle{width:34px;height:19px;border-radius:20px;background:var(--bg-1);border:1px solid var(--line-2);position:relative}
+.toggle.on{background:rgba(43,245,184,.25)}
+.toggle i{position:absolute;top:1.5px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--t2);transition:.18s}
+.toggle.on i{left:16px;background:var(--mint);box-shadow:0 0 8px var(--mint)}
+
+/* monitor view */
+.meter{margin-bottom:14px}
+.meter .lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--t1);margin-bottom:6px}
+.meter .lab b{color:var(--mint)}
+.bar{height:7px;border-radius:6px;background:var(--bg-1);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:6px;background:var(--grad);animation:grow 1.4s cubic-bezier(.2,.8,.2,1) both}
+.bar.amber i{background:linear-gradient(135deg,#ffd98a,var(--amber))}
+.tl{position:relative;padding-left:18px}
+.tl::before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:1.5px;background:var(--line-2)}
+.ev{position:relative;padding:8px 0}
+.ev::before{content:"";position:absolute;left:-16px;top:12px;width:9px;height:9px;border-radius:50%;background:var(--bg-4);border:2px solid var(--line-3)}
+.ev.mint::before{background:var(--mint);border-color:var(--mint);box-shadow:0 0 8px var(--mint)}
+.ev.amber::before{background:var(--amber);border-color:var(--amber)}
+.ev .who{font-size:11.5px;font-weight:600}
+.ev .who small{color:var(--t2);font-weight:400;font-family:var(--mono);font-size:10px}
+.ev .msg{font-size:11.5px;color:var(--t1);margin-top:2px;line-height:1.4}
+.ev .meta{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:3px}
+
+/* ============ console ============ */
+.console{grid-area:console;border-top:1px solid var(--line);display:flex;flex-direction:column;
+  background:linear-gradient(180deg,rgba(10,14,21,.92),rgba(7,9,13,.96));animation:fadeIn 1s ease both}
+.chead{display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--t2);letter-spacing:1px;text-transform:uppercase}
+.chead .ct-tab{color:var(--t1)} .chead .ct-tab.on{color:var(--mint)}
+.clog{flex:1;overflow-y:auto;padding:10px 16px;font-family:var(--mono);font-size:11.5px;line-height:1.7}
+.clog .ln{display:flex;gap:12px;white-space:nowrap}
+.clog .ts{color:var(--t3)} .lv{width:42px}
+.lv.inf{color:var(--cyan)} .lv.msg{color:var(--mint)} .lv.tool{color:var(--gold)} .lv.warn{color:var(--amber)}
+.clog .ag{color:var(--t0)} .clog .tx{color:var(--t1)}
+.cursor{display:inline-block;width:8px;height:14px;background:var(--mint);margin-left:2px;animation:blink 1s steps(1) infinite;vertical-align:middle}
+
+/* ============ keyframes ============ */
+@keyframes drift2{}
+@keyframes march{to{stroke-dashoffset:-32}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(43,245,184,.5)}70%{box-shadow:0 0 0 9px rgba(43,245,184,0)}100%{box-shadow:0 0 0 0 rgba(43,245,184,0)}}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes nodeIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes grow{from{width:0}}
+/* node entrance stagger */
+#nChan{animation-delay:.15s} #nTriage{animation-delay:.28s} #nCond{animation-delay:.4s}
+#nRefund{animation-delay:.52s} #nFaq{animation-delay:.62s} #nEsc{animation-delay:.72s}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--bg-4);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="grain"></div>
+
+<div class="app">
+  <!-- ============ TOP BAR ============ -->
+  <header class="top">
+    <div class="brand">
+      <div class="mark"></div>
+      <b>orchestra</b><span class="by">by yuno</span>
+    </div>
+    <div class="crumbs"><span>Workflows</span><span>/</span><span class="cur">Payments Support Triage</span></div>
+    <div class="spacer"></div>
+    <div class="hud">
+      <span>steps <b>4</b>/6</span><div class="div"></div>
+      <span>tokens <b>12,480</b></span><div class="div"></div>
+      <span>cost <b>$0.0184</b></span>
+    </div>
+    <span class="pill"><span class="dot"></span> running</span>
+    <button class="btn-run">▶ Run</button>
+    <div class="av"></div>
+  </header>
+
+  <!-- ============ ICON RAIL ============ -->
+  <nav class="rail">
+    <div class="mark" style="margin-bottom:8px"></div>
+    <a title="Studio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></a>
+    <a class="on" title="Workflows"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="6" height="5" rx="1.5"/><rect x="15" y="15" width="6" height="5" rx="1.5"/><path d="M6 9v4a3 3 0 0 0 3 3h6"/></svg></a>
+    <a title="Monitor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13h4l2 5 4-12 2 7h6"/></svg></a>
+    <a title="Templates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></a>
+    <a title="Channels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l16-7-7 16-2-7-7-2z"/></svg></a>
+    <div class="grow"></div>
+    <a title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></a>
+  </nav>
+
+  <!-- ============ NODE PALETTE ============ -->
+  <aside class="palette panel">
+    <div class="phead"><span class="k">◆ Node Library</span></div>
+    <div class="search">⌕ <input placeholder="Search nodes…" /></div>
+    <div class="pgroup">Agents</div>
+    <div class="ncard"><div class="ic agent">◎</div><div><div class="ti">LLM Agent</div><div class="su">role · prompt · tools</div></div><span class="port out" style="position:static;margin-left:auto"></span></div>
+    <div class="ncard"><div class="ic deep">❖</div><div><div class="ti">Deep Agent</div><div class="su">planner + sub-agents</div></div></div>
+    <div class="pgroup">Control</div>
+    <div class="ncard"><div class="ic cond">⟁</div><div><div class="ti">Condition</div><div class="su">branch / route</div></div></div>
+    <div class="ncard"><div class="ic cond">↺</div><div><div class="ti">Feedback Loop</div><div class="su">retry until pass</div></div></div>
+    <div class="pgroup">Tools & I/O</div>
+    <div class="ncard"><div class="ic tool">⚒</div><div><div class="ti">Tool Call</div><div class="su">http · search · calc</div></div></div>
+    <div class="ncard"><div class="ic tool">⛁</div><div><div class="ti">Payment (AP2)</div><div class="su">mandate · mock rail</div></div></div>
+    <div class="ncard"><div class="ic chan">✈</div><div><div class="ti">Telegram</div><div class="su">human in the loop</div></div></div>
+    <div class="ncard"><div class="ic deep">⇄</div><div><div class="ti">Remote A2A Agent</div><div class="su">agent2agent</div></div></div>
+  </aside>
+
+  <!-- ============ CANVAS ============ -->
+  <main class="canvas">
+    <div class="dots"></div>
+    <div class="canvas-tools">
+      <span class="ct">⌖ fit</span><span class="ct">＋ 100%</span><span class="ct">⊞ snap</span>
+    </div>
+
+    <!-- wires -->
+    <svg class="wires">
+      <defs>
+        <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#38d6ff"/><stop offset="1" stop-color="#2bf5b8"/>
+        </linearGradient>
+        <marker id="ar" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto">
+          <path d="M0 0 L8 4.5 L0 9 z" fill="#2bf5b8"/>
+        </marker>
+        <marker id="ar2" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto">
+          <path d="M0 0 L8 4.5 L0 9 z" fill="#ffc15e"/>
+        </marker>
+      </defs>
+      <!-- channel -> triage -->
+      <path class="wire flow" marker-end="url(#ar)" d="M256 150 C 300 150 300 168 348 168"/>
+      <!-- triage -> condition -->
+      <path class="wire flow" marker-end="url(#ar)" d="M542 168 C 590 168 590 186 632 186"/>
+      <!-- condition -> refund (refund branch, running) -->
+      <path class="wire flow" marker-end="url(#ar)" d="M782 176 C 840 176 840 120 900 120"/>
+      <!-- condition -> faq (info branch) -->
+      <path class="wire" marker-end="url(#ar)" d="M782 200 C 840 200 840 286 900 286"/>
+      <!-- refund -> escalation -->
+      <path class="wire" marker-end="url(#ar)" d="M1094 120 C 1140 120 760 430 612 430 612 430 612 430 612 430"/>
+      <!-- feedback loop: refund -> triage (needs order id) -->
+      <path class="wire loop" marker-end="url(#ar2)" d="M998 168 C 1000 300 440 320 440 232"/>
+      <!-- edge labels -->
+      <g><rect class="elabel bg" x="838" y="106" width="58" height="17" rx="8"/><text class="elabel" x="846" y="118">refund ✓</text></g>
+      <g><rect class="elabel bg" x="844" y="272" width="40" height="17" rx="8"/><text class="elabel" x="851" y="284">info</text></g>
+      <g><rect class="elabel bg" x="600" y="332" width="118" height="17" rx="8"/><text class="elabel" x="608" y="344" fill="#ffc15e">↺ needs order id</text></g>
+    </svg>
+
+    <!-- nodes -->
+    <div class="node chan done" id="nChan" style="left:62px;top:118px;width:194px">
+      <div class="nh"><div class="nav chan">✈</div><div class="nm"><b>Telegram Inbound</b><span>channel · trigger</span></div></div>
+      <div class="nb">“Hi, I was charged twice for my Rappi order.”</div>
+      <div class="nf"><span class="chips"><span class="chip">@yuno_support_bot</span></span><span class="statetag ok">received</span></div>
+      <span class="port out live"></span>
+    </div>
+
+    <div class="node agent done" id="nTriage" style="left:348px;top:130px">
+      <div class="nh"><div class="nav agent">T</div><div class="nm"><b>Triage Agent</b><span>gpt-4o · router</span></div></div>
+      <div class="nb">Classifies intent → <b style="color:var(--mint)">refund</b>. Extracts order context.</div>
+      <div class="nf"><span class="chips"><span class="chip">read_kb</span></span><span class="statetag ok">done · 1.2k tok</span></div>
+      <span class="port in"></span><span class="port out live"></span>
+    </div>
+
+    <div class="node condition done" id="nCond" style="left:632px;top:150px">
+      <div class="nh"><div class="nav cond">⟁</div><div class="nm"><b>Route</b><span>condition</span></div></div>
+      <div class="nb"><span class="branch" style="border-color:rgba(43,245,184,.4);color:var(--mint)">refund</span><span class="branch">info</span></div>
+      <span class="port in"></span><span class="port out"></span>
+    </div>
+
+    <div class="node agent running sel" id="nRefund" style="left:900px;top:74px">
+      <div class="nh"><div class="nav agent">R</div><div class="nm"><b>Refund Specialist</b><span>gpt-4o · empathetic</span></div></div>
+      <div class="nb">Verifying duplicate charge via <b style="color:var(--cyan)">payment_mock</b>… preparing AP2 refund mandate.</div>
+      <div class="nf"><span class="chips"><span class="chip">http_get</span><span class="chip">payment</span></span><span class="statetag run">● running</span></div>
+      <span class="port in live"></span><span class="port out"></span>
+    </div>
+
+    <div class="node agent" id="nFaq" style="left:900px;top:248px">
+      <div class="nh"><div class="nav agent">F</div><div class="nm"><b>FAQ Agent</b><span>gpt-4o-mini</span></div></div>
+      <div class="nb">Answers general payment questions from the KB.</div>
+      <div class="nf"><span class="chips"><span class="chip">read_kb</span></span><span class="statetag idle">idle</span></div>
+      <span class="port in"></span><span class="port out"></span>
+    </div>
+
+    <div class="node agent" id="nEsc" style="left:516px;top:392px">
+      <div class="nh"><div class="nav agent">E</div><div class="nm"><b>Escalation</b><span>human handoff</span></div></div>
+      <div class="nb">Routes unresolved cases to a human agent + summary.</div>
+      <div class="nf"><span class="chips"><span class="chip">slack</span></span><span class="statetag idle">idle</span></div>
+      <span class="port in"></span>
+    </div>
+
+    <div class="minimap">
+      <i style="left:8px;top:30px;width:20px;height:12px"></i>
+      <i style="left:42px;top:32px;width:20px;height:12px"></i>
+      <i style="left:74px;top:34px;width:14px;height:12px"></i>
+      <i style="left:104px;top:20px;width:20px;height:12px;background:var(--mint)"></i>
+      <i style="left:104px;top:52px;width:20px;height:12px"></i>
+      <i style="left:60px;top:70px;width:20px;height:12px"></i>
+    </div>
+  </main>
+
+  <!-- ============ INSPECTOR ============ -->
+  <aside class="inspect panel">
+    <div class="tabs">
+      <div class="tab on" data-v="config">⚙ Inspector</div>
+      <div class="tab" data-v="monitor">⠿ Live Monitor</div>
+    </div>
+    <div class="ibody">
+      <!-- CONFIG VIEW -->
+      <div class="view config on">
+        <div class="agenthead">
+          <div class="av2">R</div>
+          <div><b>Refund Specialist</b><br><span>agent · 14 dimensions</span></div>
+        </div>
+
+        <details class="acc" open><summary>Identity <span class="n">2</span></summary>
+          <div class="ac-body">
+            <div class="field"><label>NAME</label><input class="input" value="Refund Specialist"/></div>
+            <div class="field"><label>ROLE</label><input class="input" value="Resolves duplicate & failed payment refunds"/></div>
+          </div>
+        </details>
+
+        <details class="acc" open><summary>Model <span class="n">3</span></summary>
+          <div class="ac-body">
+            <div class="field"><label>MODEL</label><div class="input selectish">gpt-4o <span style="color:var(--t2)">▾</span></div></div>
+            <div class="row">
+              <div class="field"><label>TEMPERATURE · 0.3</label><div class="slider"><i></i><b></b></div></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="acc"><summary>Tools <span class="n">3</span></summary>
+          <div class="ac-body"><div class="chips-wrap">
+            <span class="tchip on">http_get</span><span class="tchip on">payment_mock</span><span class="tchip on">read_kb</span>
+            <span class="tchip">web_search</span><span class="tchip">calculator</span>
+          </div></div>
+        </details>
+
+        <details class="acc"><summary>Memory <span class="n">3</span></summary>
+          <div class="ac-body">
+            <div class="field"><label>MODE</label><div class="input selectish">window <span style="color:var(--t2)">▾</span></div></div>
+            <div class="row">
+              <div class="field"><label>WINDOW</label><input class="input" value="10"/></div>
+              <div class="field"><label>SUMMARIZE</label><div style="margin-top:6px"><span class="toggle on"><i></i></span></div></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="acc"><summary>Schedule <span class="n">1</span></summary>
+          <div class="ac-body"><div class="field"><label>CRON</label><input class="input" value="— event-driven —"/></div></div>
+        </details>
+
+        <details class="acc"><summary>Guardrails <span class="n">4</span></summary>
+          <div class="ac-body">
+            <div class="row">
+              <div class="field"><label>MAX STEPS</label><input class="input" value="8"/></div>
+              <div class="field"><label>MAX COST</label><input class="input" value="$0.50"/></div>
+            </div>
+            <div class="field"><label>MAX TOKENS</label><input class="input" value="20,000"/></div>
+            <div class="field"><label>ALLOWED TOOLS</label><input class="input" value="http_get, payment_mock, read_kb"/></div>
+          </div>
+        </details>
+
+        <details class="acc"><summary>Personality <span class="n">2</span></summary>
+          <div class="ac-body">
+            <div class="field"><label>TONE</label><div class="input selectish">empathetic · concise <span style="color:var(--t2)">▾</span></div></div>
+            <div class="field"><label>TRAITS</label><div class="chips-wrap"><span class="tchip on">reassuring</span><span class="tchip on">precise</span><span class="tchip">formal</span></div></div>
+          </div>
+        </details>
+      </div>
+
+      <!-- MONITOR VIEW -->
+      <div class="view monitor">
+        <div class="meter"><div class="lab"><span>Tokens · this run</span><b>12,480</b></div><div class="bar"><i style="width:62%"></i></div></div>
+        <div class="meter"><div class="lab"><span>Cost · this run</span><b>$0.0184</b></div><div class="bar"><i style="width:37%"></i></div></div>
+        <div class="meter"><div class="lab"><span>Budget used</span><b style="color:var(--amber)">37%</b></div><div class="bar amber"><i style="width:37%"></i></div></div>
+
+        <div class="phead" style="padding:8px 0">⠿ Inter-agent stream</div>
+        <div class="tl">
+          <div class="ev mint"><div class="who">Telegram <small>→ Triage · 0.0s</small></div><div class="msg">“I was charged twice for my Rappi order.”</div><div class="meta">channel · inbound</div></div>
+          <div class="ev mint"><div class="who">Triage <small>→ Route · 1.4s</small></div><div class="msg">intent=<b style="color:var(--mint)">refund</b> · confidence 0.94</div><div class="meta">1,204 tok · $0.0021</div></div>
+          <div class="ev mint"><div class="who">Route <small>→ Refund Specialist · 1.5s</small></div><div class="msg">branch: <b style="color:var(--mint)">refund ✓</b></div><div class="meta">condition</div></div>
+          <div class="ev amber"><div class="who">Refund Specialist <small>· tool · 2.9s</small></div><div class="msg">payment_mock.lookup(order) → 2 charges found</div><div class="meta">AP2 intent mandate drafted</div></div>
+          <div class="ev"><div class="who">Refund Specialist <small>· now</small></div><div class="msg">composing refund confirmation…<span class="cursor"></span></div><div class="meta">running</div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ CONSOLE ============ -->
+  <section class="console">
+    <div class="chead">
+      <span class="ct-tab on">▍runtime logs</span><span class="ct-tab">inter-agent</span><span class="ct-tab">tool calls</span>
+      <span style="margin-left:auto;color:var(--mint)">● langgraph · postgres checkpoint · run_4f1a</span>
+    </div>
+    <div class="clog">
+      <div class="ln"><span class="ts">12:04:01.220</span><span class="lv inf">INFO</span><span class="tx">compiled graph: 5 nodes, 6 edges (1 conditional, 1 cycle) → StateGraph OK</span></div>
+      <div class="ln"><span class="ts">12:04:01.318</span><span class="lv inf">INFO</span><span class="tx">checkpointer=AsyncPostgresSaver thread=run_4f1a</span></div>
+      <div class="ln"><span class="ts">12:04:01.640</span><span class="lv msg">MSG </span><span class="ag">telegram</span><span class="tx"> → triage : "charged twice for my Rappi order"</span></div>
+      <div class="ln"><span class="ts">12:04:03.005</span><span class="lv tool">TOOL</span><span class="ag">triage</span><span class="tx"> read_kb("duplicate charge") → 3 docs · 412 tok</span></div>
+      <div class="ln"><span class="ts">12:04:03.402</span><span class="lv msg">MSG </span><span class="ag">triage</span><span class="tx"> → route : intent=refund (0.94)</span></div>
+      <div class="ln"><span class="ts">12:04:04.910</span><span class="lv tool">TOOL</span><span class="ag">refund_specialist</span><span class="tx"> payment_mock.lookup(order_id?) → MISSING ARG</span></div>
+      <div class="ln"><span class="ts">12:04:05.001</span><span class="lv warn">WARN</span><span class="tx">interrupt() → waiting_human · prompting via telegram for order id</span><span class="cursor"></span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* minimal interactivity: tab + console-tab toggles, node selection */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); document.querySelector('.view.'+t.dataset.v).classList.add('on');
+}));
+document.querySelectorAll('.ct-tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.ct-tab').forEach(x=>x.classList.remove('on')); t.classList.add('on');
+}));
+document.querySelectorAll('.node').forEach(n=>n.addEventListener('click',()=>{
+  document.querySelectorAll('.node').forEach(x=>x.classList.remove('sel')); n.classList.add('sel');
+}));
+</script>
+</body>
+</html>
