@@ -5,7 +5,7 @@ Tracks phase gates from `backend-implementation-plan.md`. Each phase ends green 
 | Phase | Status | Gate | Notes |
 |---|---|---|---|
 | P0 Skeleton | ✅ GREEN | `P0_GREEN` | docker compose up boots; /health ok; 7 tables via Alembic. db host port → **5433** (5432 was taken). mlflow moved to `[obs]` extra. |
-| P1 Vertical Slice 🛡️ | ⬜ next | `P1_GREEN` | Agent CRUD + fixed 2-agent LangGraph + Telegram + persisted messages + interrupt/resume |
+| P1 Vertical Slice 🛡️ | ✅ GREEN | `P1_GREEN` | Agent CRUD; fixed researcher→reviewer→writer LangGraph w/ AsyncPostgresSaver; executor (updates stream + robust interrupt detect via aget_state); Telegram long-poll + router; /api/runs + messages + resume. 3 tests pass; live run completed against real LLM; telegram.started confirmed. NullPool for asyncio safety; tz-aware datetimes fixed. |
 | P2 Visual Builder + Compiler | ⬜ | `P2_GREEN` | |
 | P3 Config + Tools + Templates + Scheduling | ⬜ | `P3_GREEN` | |
 | P4 Monitoring + Observability | ⬜ | `P4_GREEN` | langchain-core 1.2.31 is above mlflow autolog range (0.3.25–1.2.15) — verify/pin at P4 |

@@ -1,16 +1,15 @@
 """FastAPI application factory + lifespan.
 
-P0: boots the web app, wires logging + error handlers, exposes /health.
-Later phases extend the lifespan (scheduler, channels, mlflow) and routers.
+Lifespan wires the Postgres checkpointer, the executor, and channel polling.
 """
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health
+from app.api import agents, health, runs
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 
@@ -21,9 +20,33 @@ log = get_logger(__name__)
 async def lifespan(app: FastAPI):
     configure_logging()
     log.info("app.startup")
-    # Future phases: start scheduler, channels, mlflow autolog, checkpointer.setup()
-    yield
-    log.info("app.shutdown")
+    app.state.tasks = set()
+
+    stack = AsyncExitStack()
+    app.state.stack = stack
+
+    # Checkpointer (persistence/memory/interrupt-resume) + executor.
+    from app.runtime.checkpointer import open_postgres_checkpointer
+    from app.runtime.executor import Executor
+
+    checkpointer = await open_postgres_checkpointer(stack)
+    app.state.executor = Executor(checkpointer)
+
+    # Channels (Telegram long-polling, if a token is configured).
+    from app.channels.manager import ChannelManager
+    from app.channels.router import ChannelRouter
+
+    router = ChannelRouter(app.state.executor)
+    manager = ChannelManager()
+    await manager.start_all(router)
+    app.state.channel_manager = manager
+
+    try:
+        yield
+    finally:
+        log.info("app.shutdown")
+        await manager.stop_all()
+        await stack.aclose()
 
 
 def create_app() -> FastAPI:
@@ -38,8 +61,9 @@ def create_app() -> FastAPI:
 
     install_error_handlers(app)
 
-    # Health at root (no prefix); feature routers will mount under /api.
-    app.include_router(health.router)
+    app.include_router(health.router)       # /health, /readyz
+    app.include_router(agents.router)       # /api/agents
+    app.include_router(runs.router)         # /api/runs
 
     return app
 
