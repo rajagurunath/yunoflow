@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: yuno
+      POSTGRES_PASSWORD: yuno
+      POSTGRES_DB: yuno
+    ports:
+      - "5433:5432"   # host 5433 -> container 5432 (avoids clashing with a local Postgres)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yuno -d yuno"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://yuno:yuno@db:5432/yuno
+      CHECKPOINT_DB_URI: postgresql://yuno:yuno@db:5432/yuno
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:
