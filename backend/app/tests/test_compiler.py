@@ -99,6 +99,22 @@ async def test_cycle_feedback_loop(checkpointer):
 
 
 @pytest.mark.asyncio
+async def test_deepagent_node_compiles(checkpointer):
+    # Structural: the deepagent node compiles (create_deep_agent runs at invoke time).
+    agents = {"d": FakeAgent("INVESTIGATE")}
+    g = GraphJSON.model_validate({
+        "nodes": [
+            {"id": "s", "type": "start"},
+            {"id": "d", "type": "deepagent", "data": {"agent_id": "d"}},
+            {"id": "e", "type": "end"},
+        ],
+        "edges": [{"id": "1", "source": "s", "target": "d"}, {"id": "2", "source": "d", "target": "e"}],
+    })
+    graph = compile_graph(g, agents=agents, checkpointer=checkpointer)
+    assert graph is not None
+
+
+@pytest.mark.asyncio
 async def test_validate_missing_start():
     g = GraphJSON.model_validate({
         "nodes": [{"id": "a", "type": "agent", "data": {"agent_id": "a"}}, {"id": "e", "type": "end"}],

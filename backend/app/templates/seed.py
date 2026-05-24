@@ -110,6 +110,28 @@ def _payment_authorization() -> dict:
     }
 
 
+def _dispute_investigator() -> dict:
+    return {
+        "nodes": [
+            {"id": "start", "type": "start"},
+            {"id": "investigator", "type": "deepagent",
+             "data": {"agent_spec": {
+                 "name": "Dispute Investigator", "role": "investigates payment disputes",
+                 "system_prompt": (
+                     "You are a payment dispute investigator. Plan your investigation, use the "
+                     "knowledge base and payment tools to gather evidence about the disputed "
+                     "charge, then give a clear recommendation (refund / deny / escalate) with reasoning."
+                 ),
+                 "model": M, "tools": ["read_kb", "create_payment_intent", "execute_payment"]}}},
+            {"id": "end", "type": "end"},
+        ],
+        "edges": [
+            {"id": "e1", "source": "start", "target": "investigator"},
+            {"id": "e2", "source": "investigator", "target": "end"},
+        ],
+    }
+
+
 TEMPLATES = [
     ("Payments Support Triage",
      "Triage a customer message, route refund vs info, resolve with AP2 refund tools.",
@@ -120,6 +142,9 @@ TEMPLATES = [
     ("Payment Authorization (AP2)",
      "Risk-assess a payment then approve / step-up / decline using AP2-style mandates.",
      _payment_authorization()),
+    ("Dispute Investigator (DeepAgent)",
+     "A deep agent that plans, uses tools, and spawns sub-agents to investigate a payment dispute.",
+     _dispute_investigator()),
 ]
 
 

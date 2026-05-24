@@ -26,6 +26,8 @@ dependencies = [
   "httpx>=0.27",
   # --- Scheduling (P3) ---
   "apscheduler>=3.10,<4.0",
+  # --- Differentiators (P5): smoke-tested OK, promoted to core ---
+  "deepagents>=0.5,<1.0",
 ]
 
 [project.optional-dependencies]

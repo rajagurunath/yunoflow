@@ -120,7 +120,7 @@ capabilities rather than bespoke code. Full comparison vs AutoGen and CrewAI:
 
 | Edge | Standard | Status |
 |---|---|---|
-| Agent ↔ Agent | LangGraph shared state (+ **A2A** at the boundary) | state: built · A2A: future direction |
+| Agent ↔ Agent | LangGraph shared state + **A2A** Agent Cards | state: built · A2A discovery: built (`/api/a2a/agents`) · A2A task exec: future |
 | Agent ↔ Human (chat) | **Telegram** (aiogram long-poll) | built |
 | Agent ↔ UI (events) | custom WebSocket (*AG-UI*-shaped) | built |
 | Agent ↔ Tools | internal registry (*MCP*) | built · MCP: future |
@@ -157,7 +157,7 @@ Guardrails are enforced at runtime: `max_steps` → graph recursion limit;
 `max_tokens`/`max_cost_usd` → the executor finalizes a run as `failed` when
 exceeded; `allowed_tools` filters what an agent can call.
 
-## Workflow templates (3)
+## Workflow templates (4)
 
 1. **Payments Support Triage** — triage → condition(refund | info) → refund
    specialist (AP2 refund tools) / FAQ agent. Conditions + Telegram + HITL.
@@ -165,6 +165,8 @@ exceeded; `allowed_tools` filters what an agent can call.
    the writer until approved (feedback loop / cycle).
 3. **Payment Authorization (AP2)** — risk-assess → approve / step-up / decline,
    executing via AP2 intent/cart/payment mandates.
+4. **Dispute Investigator (DeepAgent)** — a `deepagents` node that plans, calls
+   tools, and spawns sub-agents to investigate a disputed charge and recommend.
 
 ---
 
@@ -203,6 +205,7 @@ loads it. Instantiating creates the agents and a runnable workflow.
 | `WS` | `/api/ws/runs/{id}` | live monitor (replay + stream) |
 | `GET` | `/api/templates`, `POST …/instantiate` | templates |
 | `GET` | `/api/tools`, `/api/channels/status` | tools, channel status |
+| `GET` | `/api/a2a/agents`, `…/agents/{id}` | A2A Agent Card discovery |
 
 WebSocket event envelope: `{seq, run_id, ts, type, data}` where `type ∈
 {run_started, node_exit, agent_message, token_usage, interrupt, run_completed, error}`.
@@ -222,9 +225,14 @@ for determinism. `make lint` runs ruff.
 
 ## Future directions (designed, not built)
 
-These were scoped as gated/optional and are documented for credibility rather than
-shipped: **A2A** (agents addressable + remote-agent node), **DeepAgents** (a
-planning sub-agent node), **DBOS** (durable execution over the same Postgres),
-**MLflow** deep tracing (flag + `[obs]` extra ready), **AG-UI** (standardize the
-event stream), **MCP** (tool exposure), full **AP2** rails, and **Temporal/Hatchet**
-at scale. See [`tech-docs/backend-implementation-plan.md`](tech-docs/backend-implementation-plan.md).
+**Built (bonus, beyond the brief):** **DeepAgents** — a planning + sub-agent +
+filesystem node (the Dispute Investigator template); **A2A** Agent Card discovery
+(`/api/a2a/agents`) making agents A2A-addressable; **MLflow** deep tracing (flag +
+`[obs]` extra + compose profile).
+
+**Designed, not shipped** (scoped out to protect the core, documented for
+credibility): full **A2A** JSON-RPC task execution (the a2a-sdk 1.x runtime is
+Protobuf-backed), **DBOS** durable execution over the same Postgres, **AG-UI**
+(standardize the event stream), **MCP** (tool exposure), full **AP2** rails, and
+**Temporal/Hatchet** at scale. See
+[`tech-docs/backend-implementation-plan.md`](tech-docs/backend-implementation-plan.md).
