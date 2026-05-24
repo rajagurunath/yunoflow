@@ -87,6 +87,7 @@ class Executor:
                         question = _interrupt_text(update[0].value)
                         continue
 
+                    await self._event(run_id, "node_exit", {"node_id": node_id})
                     for msg in (update or {}).get("messages", []) or []:
                         content = getattr(msg, "content", "") or ""
                         usage = getattr(msg, "usage_metadata", None) or {}

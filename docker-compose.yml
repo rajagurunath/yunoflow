@@ -28,6 +28,13 @@ services:
     ports:
       - "8000:8000"
 
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
   # Optional deep-observability server. Start with: docker compose --profile obs up
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest

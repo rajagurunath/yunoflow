@@ -1,7 +1,12 @@
-.PHONY: up down logs dev migrate seed test lint fmt build
+.PHONY: up down logs dev migrate seed test lint fmt build frontend
 
-# One-command demo: build + run db + backend (+ frontend once it exists), detached.
-up:
+# Build the frontend (on the host — robust across local Docker setups).
+frontend:
+	cd frontend && npm install && npm run build
+
+# One-command demo: build the UI, then run db + backend + frontend, detached.
+# UI at http://localhost:5173, API at http://localhost:8000.
+up: frontend
 	docker compose up --build -d
 
 down:
