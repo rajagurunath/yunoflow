@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Shell } from "./components/Shell";
 import { AgentStudio } from "./features/AgentStudio";
+import { ChannelsView } from "./features/ChannelsView";
 import { MessageHistory } from "./features/MessageHistory";
 import { TemplateGallery } from "./features/TemplateGallery";
 import { WorkflowBuilder } from "./features/WorkflowBuilder";
 
-export type View = "templates" | "studio" | "builder" | "history";
+export type View = "templates" | "studio" | "builder" | "history" | "channels";
 
 export function App() {
   const [view, setView] = useState<View>("templates");
@@ -19,6 +20,7 @@ export function App() {
       {view === "studio" && <AgentStudio />}
       {view === "builder" && <WorkflowBuilder workflowId={workflowId} onOpen={openBuilder} />}
       {view === "history" && <MessageHistory />}
+      {view === "channels" && <ChannelsView />}
     </Shell>
   );
 }

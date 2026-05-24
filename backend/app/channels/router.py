@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from langchain_core.messages import HumanMessage
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.channels.base import InboundMessage
 from app.core.db import SessionLocal
@@ -41,6 +41,31 @@ class ChannelRouter:
             await s.refresh(wf)
         return wf
 
+    async def _resolve_workflow(self, s, channel_type: str, external_chat_id: str) -> Workflow:
+        """A ChannelBinding (for this chat, or a channel-wide default) selects the
+        workflow; otherwise fall back to the demo graph."""
+        from app.models import ChannelBinding
+
+        stmt = (
+            select(ChannelBinding)
+            .where(
+                ChannelBinding.channel_type == channel_type,
+                ChannelBinding.active.is_(True),
+                ChannelBinding.workflow_id.isnot(None),
+                or_(ChannelBinding.external_chat_id == external_chat_id,
+                    ChannelBinding.external_chat_id.is_(None)),
+            )
+            # prefer a chat-specific binding over a channel-wide default
+            .order_by(ChannelBinding.external_chat_id.is_(None).asc())
+            .limit(1)
+        )
+        binding = (await s.execute(stmt)).scalars().first()
+        if binding and binding.workflow_id:
+            wf = await s.get(Workflow, binding.workflow_id)
+            if wf is not None:
+                return wf
+        return await self._demo_workflow(s)
+
     async def _latest_waiting_for_chat(self, s, external_chat_id: str) -> WorkflowRun | None:
         stmt = (
             select(WorkflowRun)
@@ -61,7 +86,7 @@ class ChannelRouter:
                 wf = await s.get(Workflow, waiting.workflow_id)
                 graph, _ = await build_graph_for_workflow(s, wf, self.executor.cp)
             else:
-                wf = await self._demo_workflow(s)
+                wf = await self._resolve_workflow(s, m.channel_type, m.external_chat_id)
                 graph, _ = await build_graph_for_workflow(s, wf, self.executor.cp)
                 wf_id = wf.id
 

@@ -1,4 +1,6 @@
-import type { Agent, Message, Run, Template, ToolSpec, Workflow, WSEvent } from "./types";
+import type {
+  Agent, ChannelBinding, Message, Run, Template, ToolSpec, Workflow, WSEvent,
+} from "./types";
 
 async function j<T>(r: Response): Promise<T> {
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
@@ -32,6 +34,12 @@ export const api = {
   runMessages: (id: string) => fetch(`/api/runs/${id}/messages`).then(j<Message[]>),
   runEvents: (id: string) => fetch(`/api/runs/${id}/events`).then(j<WSEvent[]>),
   listRuns: () => fetch("/api/runs").then(j<Run[]>),
+
+  listChannels: () => fetch("/api/channels").then(j<ChannelBinding[]>),
+  channelStatus: () => fetch("/api/channels/status").then(j<Record<string, any>>),
+  createChannel: (b: { channel_type: string; workflow_id: string }) =>
+    post("/api/channels", b).then(j<ChannelBinding>),
+  deleteChannel: (id: string) => fetch(`/api/channels/${id}`, { method: "DELETE" }).then(() => null),
 };
 
 export function openRunSocket(runId: string, onEvent: (e: WSEvent) => void): WebSocket {

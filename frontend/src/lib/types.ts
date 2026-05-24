@@ -32,3 +32,8 @@ export interface Message {
 }
 export interface ToolSpec { name: string; description: string; side_effecting: boolean }
 export interface WSEvent { seq: number; run_id: string; type: string; ts: string; data: any }
+export interface ChannelBinding {
+  id: string; channel_type: string;
+  agent_id: string | null; workflow_id: string | null;
+  external_chat_id: string | null; active: boolean; created_at: string;
+}
