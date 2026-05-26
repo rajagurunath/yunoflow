@@ -14,7 +14,7 @@ export function Shell({ view, setView, children, onSignOut }: {
   view: View; setView: (v: View) => void; children: React.ReactNode; onSignOut?: () => void;
 }) {
   return (
-    <div className="bg-atmos relative flex h-screen">
+    <div className="theme-light relative flex h-screen bg-bg0">
       <nav className="relative z-10 flex w-52 flex-col gap-1 border-r border-line bg-bg2/80 p-3">
         <div className="mb-3 flex items-center gap-2.5 px-1">
           <div className="grid h-8 w-8 place-items-center rounded-lg grad shadow-glow">

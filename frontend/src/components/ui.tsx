@@ -15,7 +15,7 @@ export function Button({ children, onClick, variant = "ghost", disabled }: {
 }) {
   const base = "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-bold transition disabled:opacity-40";
   const styles = variant === "primary"
-    ? "grad text-[#04110d] shadow-glow hover:-translate-y-px"
+    ? "grad text-white shadow-glow hover:-translate-y-px"
     : "border border-line2 text-t1 hover:text-t0 hover:bg-bg3";
   return <button className={`${base} ${styles}`} onClick={onClick} disabled={disabled}>{children}</button>;
 }

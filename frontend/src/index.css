@@ -4,7 +4,33 @@
 
 :root {
   --grad: linear-gradient(135deg, #38d6ff, #2bf5b8);
+  /* Midnight Ledger (dark) — default. RGB channels for Tailwind alpha. */
+  --c-bg0: 7 9 13;   --c-bg1: 10 14 21;  --c-bg2: 14 19 28;  --c-bg3: 20 27 39;  --c-bg4: 26 36 51;
+  --c-t0: 234 240 247; --c-t1: 155 171 191; --c-t2: 100 118 139; --c-t3: 63 77 94;
+  --c-mint: 43 245 184; --c-cyan: 56 214 255; --c-amber: 255 193 94; --c-coral: 255 107 114; --c-gold: 232 192 125;
+  --line: rgba(255,255,255,0.07);
+  --line2: rgba(255,255,255,0.12);
 }
+
+/* Vault Light — used by the console (wrap its root in .theme-light). */
+.theme-light {
+  --c-bg0: 255 253 249;  --c-bg1: 245 242 236;  --c-bg2: 255 255 255;  --c-bg3: 240 237 230;  --c-bg4: 230 226 218;
+  --c-t0: 20 24 28;  --c-t1: 60 68 78;  --c-t2: 92 100 112;  --c-t3: 140 148 160;
+  --c-mint: 18 135 106;  --c-cyan: 20 134 168;  --c-amber: 183 138 46;  --c-coral: 199 64 64;  --c-gold: 183 138 46;
+  --line: rgba(20,24,28,0.10);
+  --line2: rgba(20,24,28,0.16);
+  --grad: linear-gradient(135deg, #15936f, #0d6e54);
+  color: rgb(var(--c-t0)); /* ink base so untinted text (headings) isn't the dark-theme near-white */
+}
+.theme-light .grad { background: linear-gradient(135deg, #15936f, #0d6e54); }
+.theme-light .shadow-glow { box-shadow: 0 0 0 1px rgba(18,135,106,.22), 0 14px 34px -14px rgba(18,135,106,.4); }
+.theme-light .running-glow { animation: none; border-color: rgba(18,135,106,.6) !important; box-shadow: 0 0 0 1px rgba(18,135,106,.3); }
+.theme-light .text-grad { background: linear-gradient(135deg, #12876a, #0d6e54); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.theme-light ::-webkit-scrollbar-thumb { background: #d8d3c8; }
+.theme-light .react-flow__edge-path { stroke: rgba(20,24,28,.18); }
+.theme-light .react-flow__controls button { background: #fff; border-color: rgba(20,24,28,.12); color: #5c6470; }
+.theme-light .react-flow__controls button:hover { background: #f3f0ea; }
+.theme-light .react-flow__edge-text { fill: #5c6470; }
 
 html, body, #root { height: 100%; }
 body {
@@ -60,6 +86,24 @@ body {
 .flow-line { stroke-dasharray: 3 7; animation: dash 1.3s linear infinite; }
 @keyframes softpulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
 .soft-pulse { animation: softpulse 2.4s ease-in-out infinite; }
+
+/* ---- Vault (light) helpers ---- */
+.bg-paper-grid {
+  background-image:
+    linear-gradient(rgba(20,24,28,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,24,28,.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.vault-glow::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(55% 50% at 85% 0%, rgba(13,110,84,.07), transparent 60%),
+    radial-gradient(40% 40% at 5% 10%, rgba(183,138,46,.05), transparent 60%);
+}
+.text-emerald-grad {
+  background: linear-gradient(120deg, #0d6e54, #15936f);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
 
 @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(43,245,184,.5);} 70% { box-shadow: 0 0 0 9px rgba(43,245,184,0);} 100% { box-shadow: 0 0 0 0 rgba(43,245,184,0);} }
 .running-glow { animation: pulse-ring 1.6s infinite; border-color: rgba(43,245,184,.55) !important; }

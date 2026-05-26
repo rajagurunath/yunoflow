@@ -41,10 +41,10 @@ function Frame({ data, accent, glyph, inPort = true, outPort = true }: {
   );
 }
 
-export const AgentNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#2bf5b8" glyph="◎" />;
-export const ConditionNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#ffc15e" glyph="⟁" />;
-export const ToolNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#38d6ff" glyph="⚒" />;
-export const DeepAgentNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#cffaf0" glyph="❖" />;
+export const AgentNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#12876a" glyph="◎" />;
+export const ConditionNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#b78a2e" glyph="⟁" />;
+export const ToolNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#1486a8" glyph="⚒" />;
+export const DeepAgentNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#0d6e54" glyph="❖" />;
 
 export const StartNode = ({ data }: { data: NodeData }) => (
   <div className="rounded-full border border-mint/40 bg-bg2 px-4 py-2 font-mono text-[11px] text-mint">

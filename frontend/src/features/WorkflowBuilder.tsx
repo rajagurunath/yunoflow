@@ -28,7 +28,7 @@ function buildRF(graph: GraphJSON, agentsById: Record<string, Agent>) {
   const edges = g.edges.map((e) => ({
     id: e.id, source: e.source, target: e.target,
     label: e.data?.when ?? e.label ?? undefined,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#2bf5b8" },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "#12876a" },
   }));
   return { nodes, edges };
 }
@@ -110,7 +110,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
     const label = src?.type === "condition"
       ? (window.prompt("Branch label for this edge (e.g. refund):") || undefined) : undefined;
     setEdges((eds) => addEdge(
-      { ...c, label, data: label ? { when: label } : {}, markerEnd: { type: MarkerType.ArrowClosed, color: "#2bf5b8" } },
+      { ...c, label, data: label ? { when: label } : {}, markerEnd: { type: MarkerType.ArrowClosed, color: "#12876a" } },
       eds,
     ));
   }, [nodes, setEdges]);
@@ -322,8 +322,8 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
           onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
           deleteKeyCode={["Backspace", "Delete"]}
           nodeTypes={nodeTypes} fitView proOptions={{ hideAttribution: true }}
-          defaultEdgeOptions={{ style: { stroke: "rgba(255,255,255,.2)", strokeWidth: 2 } }}>
-          <Background variant={BackgroundVariant.Dots} gap={26} size={1.1} color="rgba(255,255,255,.12)" />
+          defaultEdgeOptions={{ style: { stroke: "rgba(20,24,28,.18)", strokeWidth: 2 } }}>
+          <Background variant={BackgroundVariant.Dots} gap={26} size={1.1} color="rgba(20,24,28,.12)" />
           <Controls showInteractive={false} />
         </ReactFlow>
 

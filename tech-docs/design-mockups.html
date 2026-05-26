@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orchestra · Design Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700,900&f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0c;color:#e8e8ea;font-family:"Satoshi",system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+  /* ---- Document chrome ---- */
+  .doc-head{padding:64px 0 36px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .doc-eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#7c8595}
+  .doc-h1{font-family:"Clash Display",sans-serif;font-weight:600;font-size:clamp(30px,4vw,46px);margin-top:14px;letter-spacing:-.01em}
+  .doc-sub{margin-top:14px;max-width:680px;color:#9aa3b2;font-size:16px}
+  .doc-note{margin-top:18px;font-family:"JetBrains Mono",monospace;font-size:12px;color:#5f6675}
+
+  .dir{padding:56px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .dir-label{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+  .dir-num{font-family:"JetBrains Mono",monospace;font-size:12px;color:#6b7280}
+  .dir-name{font-family:"Clash Display",sans-serif;font-weight:600;font-size:26px}
+  .dir-tag{font-size:14px;color:#9aa3b2}
+  .dir-grid{display:grid;grid-template-columns:248px 1fr;gap:28px;margin-top:24px}
+  @media(max-width:880px){.dir-grid{grid-template-columns:1fr}}
+  .spec{font-size:13px}
+  .spec h4{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6b7280;margin:16px 0 7px}
+  .spec p{color:#aab2c0;font-size:13px}
+  .swatches{display:flex;gap:7px;flex-wrap:wrap}
+  .sw{width:30px;height:30px;border-radius:7px;border:1px solid rgba(255,255,255,.14)}
+  .frame{border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+
+  /* ============ DIRECTION A — MIDNIGHT LEDGER (refined dark) ============ */
+  .A{--bg:#07090d;--s1:#0e131c;--s2:#141b27;--fg:#eaf0f7;--mut:#9babbf;--dim:#64768b;--acc:#2bf5b8;--acc2:#38d6ff;--line:rgba(255,255,255,.08)}
+  .A{background:var(--bg);color:var(--fg);font-family:"Satoshi",sans-serif;position:relative}
+  .A .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:42px 42px;-webkit-mask-image:radial-gradient(120% 90% at 60% 0,#000 50%,transparent 100%)}
+  .A .glow{position:absolute;inset:0;background:radial-gradient(50% 50% at 75% 8%,rgba(43,245,184,.12),transparent 60%),radial-gradient(40% 40% at 8% 30%,rgba(56,214,255,.08),transparent 60%)}
+  .A .hero{position:relative;padding:40px 36px}
+  .A .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--acc)}
+  .A h2{font-family:"Clash Display",sans-serif;font-weight:600;font-size:38px;line-height:1.05;margin-top:12px;max-width:13ch}
+  .A .sub{color:var(--mut);margin-top:14px;max-width:46ch}
+  .A .cta{display:inline-flex;margin-top:20px;gap:10px}
+  .A .btn{padding:11px 18px;border-radius:10px;font-weight:700;font-size:13px}
+  .A .btn.primary{background:linear-gradient(135deg,var(--acc2),var(--acc));color:#04110d;box-shadow:0 0 28px rgba(43,245,184,.3)}
+  .A .btn.ghost{border:1px solid rgba(255,255,255,.14);color:var(--mut)}
+  .A .console{position:relative;display:grid;grid-template-columns:150px 1fr 230px;border-top:1px solid var(--line);background:linear-gradient(180deg,rgba(14,19,28,.6),rgba(7,9,13,.6))}
+  .A .rail{border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:5px}
+  .A .rail .it{display:flex;gap:9px;align-items:center;font-size:12.5px;color:var(--dim);padding:7px 9px;border-radius:8px}
+  .A .rail .it.on{color:var(--acc);background:rgba(43,245,184,.08)}
+  .A .canvas{position:relative;padding:24px;min-height:230px}
+  .A .node{position:absolute;width:130px;border-radius:11px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,var(--s2),var(--s1));padding:9px 11px}
+  .A .node.live{border-color:rgba(43,245,184,.55);box-shadow:0 0 0 1px rgba(43,245,184,.4),0 0 26px rgba(43,245,184,.25)}
+  .A .node b{font-family:"Clash Display",sans-serif;font-size:12.5px;display:block}
+  .A .node span{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--dim)}
+  .A .mon{border-left:1px solid var(--line);padding:14px}
+  .A .mon .lab{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .A .mon .big{font-family:"JetBrains Mono",monospace;font-size:18px;color:var(--acc);margin-top:2px}
+  .A .ev{font-size:11px;color:var(--mut);margin-top:9px;padding-left:12px;position:relative}
+  .A .ev::before{content:"";position:absolute;left:0;top:5px;width:6px;height:6px;border-radius:50%;background:var(--acc)}
+
+  /* ============ DIRECTION B — VAULT (refined light, editorial) ============ */
+  .B{--bg:#f5f2ec;--paper:#fffdf9;--ink:#14181c;--mut:#5c6470;--acc:#0d6e54;--acc2:#caa24a;--line:rgba(20,24,28,.1)}
+  .B{background:var(--bg);color:var(--ink);font-family:"General Sans",sans-serif}
+  .B .hero{padding:42px 40px;position:relative;background:
+    radial-gradient(60% 60% at 88% 0,rgba(13,110,84,.06),transparent 60%)}
+  .B .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc)}
+  .B h2{font-family:"Fraunces",serif;font-weight:500;font-size:42px;line-height:1.04;margin-top:14px;max-width:13ch;letter-spacing:-.01em}
+  .B h2 em{font-style:italic;color:var(--acc)}
+  .B .sub{color:var(--mut);margin-top:16px;max-width:48ch;font-size:15.5px}
+  .B .cta{display:inline-flex;margin-top:22px;gap:12px;align-items:center}
+  .B .btn{padding:11px 20px;border-radius:8px;font-weight:600;font-size:14px}
+  .B .btn.primary{background:var(--ink);color:var(--paper)}
+  .B .btn.ghost{color:var(--ink);border-bottom:1px solid var(--acc)}
+  .B .rule{height:1px;background:var(--line);margin:0 40px}
+  .B .console{display:grid;grid-template-columns:160px 1fr 220px;background:var(--paper)}
+  .B .rail{border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:3px}
+  .B .rail .it{font-size:13px;color:var(--mut);padding:7px 10px;border-radius:7px}
+  .B .rail .it.on{color:var(--ink);background:rgba(13,110,84,.1);font-weight:600}
+  .B .canvas{padding:24px;min-height:230px;position:relative;background:
+    linear-gradient(rgba(20,24,28,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(20,24,28,.03) 1px,transparent 1px);background-size:24px 24px}
+  .B .node{position:absolute;width:132px;border-radius:10px;border:1px solid var(--line);background:var(--paper);padding:9px 11px;box-shadow:0 6px 18px rgba(20,24,28,.06)}
+  .B .node.live{border-color:var(--acc);box-shadow:0 6px 22px rgba(13,110,84,.18)}
+  .B .node b{font-family:"Fraunces",serif;font-size:13px;display:block}
+  .B .node span{font-family:"IBM Plex Mono",monospace;font-size:9px;color:var(--mut)}
+  .B .mon{border-left:1px solid var(--line);padding:16px}
+  .B .mon .lab{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+  .B .mon .big{font-family:"Fraunces",serif;font-size:24px;color:var(--acc);margin-top:2px}
+  .B .ev{font-size:11.5px;color:var(--mut);margin-top:10px;padding-left:14px;position:relative}
+  .B .ev::before{content:"";position:absolute;left:0;top:6px;width:5px;height:5px;border-radius:50%;background:var(--acc)}
+
+  /* ============ DIRECTION C — CONTROL ROOM (technical mono, swiss) ============ */
+  .C{--bg:#0b0b0c;--s1:#141416;--fg:#f2f2ee;--mut:#9a9a93;--dim:#62625c;--acc:#c6f24e;--acc2:#ff8a3d;--line:rgba(255,255,255,.1)}
+  .C{background:var(--bg);color:var(--fg);font-family:"Space Mono",monospace}
+  .C .ticker{border-bottom:1px solid var(--line);padding:6px 0;font-family:"Space Mono",monospace;font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden}
+  .C .ticker span{margin:0 22px;letter-spacing:.06em}
+  .C .ticker b{color:var(--acc)}
+  .C .hero{padding:38px 34px;position:relative;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:34px 34px}
+  .C .eyebrow{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);border:1px solid var(--acc);display:inline-block;padding:3px 8px}
+  .C h2{font-family:"Archivo",sans-serif;font-weight:800;font-size:44px;line-height:.98;margin-top:16px;max-width:14ch;text-transform:uppercase;letter-spacing:-.02em}
+  .C .sub{color:var(--mut);margin-top:16px;max-width:50ch;font-size:13px;line-height:1.6}
+  .C .cta{display:flex;margin-top:22px;gap:0}
+  .C .btn{padding:12px 20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .C .btn.primary{background:var(--acc);color:#0b0b0c}
+  .C .btn.ghost{border:1px solid var(--line);color:var(--fg);border-left:0}
+  .C .console{display:grid;grid-template-columns:160px 1fr 230px;border-top:1px solid var(--line)}
+  .C .rail{border-right:1px solid var(--line);padding:0}
+  .C .rail .it{font-size:11px;color:var(--dim);padding:11px 14px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.05em}
+  .C .rail .it.on{color:var(--bg);background:var(--acc);font-weight:700}
+  .C .canvas{padding:22px;min-height:230px;position:relative}
+  .C .node{position:absolute;width:132px;border:1px solid var(--line);background:var(--s1);padding:8px 10px}
+  .C .node.live{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+  .C .node b{font-family:"Archivo",sans-serif;font-weight:700;font-size:12px;display:block;text-transform:uppercase}
+  .C .node span{font-size:8.5px;color:var(--dim)}
+  .C .mon{border-left:1px solid var(--line);padding:14px}
+  .C .mon .lab{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .C .mon .big{font-family:"Archivo",sans-serif;font-weight:800;font-size:22px;color:var(--acc);margin-top:2px}
+  .C .ev{font-size:10.5px;color:var(--mut);margin-top:9px;border-left:2px solid var(--acc);padding-left:9px}
+  .C .blink{animation:bl 1s steps(1) infinite}@keyframes bl{50%{opacity:0}}
+
+  .verdict{padding:54px 0 80px}
+  .verdict h3{font-family:"Clash Display",sans-serif;font-weight:600;font-size:22px}
+  .verdict p{color:#9aa3b2;margin-top:10px;max-width:760px;font-size:15px}
+  .pick{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .pick .chip{border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;font-size:13px;color:#cdd4df}
+</style>
+</head>
+<body>
+
+<div class="wrap doc-head">
+  <div class="doc-eyebrow">Orchestra · by Yuno — design exploration</div>
+  <h1 class="doc-h1">Three directions for an enterprise agent platform.</h1>
+  <p class="doc-sub">Same product — agent &amp; workflow orchestration for payments teams — rendered in three distinct aesthetics. Each shows a landing hero and a console preview so the tone reads end-to-end. Pick one (or mix) and I’ll implement it across the live app.</p>
+  <p class="doc-note">scroll ↓ &nbsp; A · Midnight Ledger &nbsp;|&nbsp; B · Vault &nbsp;|&nbsp; C · Control Room</p>
+</div>
+
+<!-- ============ A ============ -->
+<div class="wrap dir">
+  <div class="dir-label"><span class="dir-num">DIRECTION A</span><span class="dir-name">Midnight Ledger</span></div>
+  <div class="dir-tag">Refined dark · precision instrument. Linear × a trading terminal. <em>(today’s direction, sharpened)</em></div>
+  <div class="dir-grid">
+    <div class="spec">
+      <h4>Feels like</h4><p>Deep, engineered, “value is flowing.” Confident dark mode for an operator product.</p>
+      <h4>Palette</h4><div class="swatches"><i class="sw" style="background:#07090d"></i><i class="sw" style="background:#141b27"></i><i class="sw" style="background:#2bf5b8"></i><i class="sw" style="background:#38d6ff"></i><i class="sw" style="background:#e8c07d"></i></div>
+      <h4>Type</h4><p>Clash Display · Satoshi · JetBrains Mono (data)</p>
+      <h4>Motion</h4><p>Marching-ant edges, soft node pulses, staggered hero reveal.</p>
+      <h4>Best for</h4><p>Looking modern &amp; technical; least work (already built).</p>
+    </div>
+    <div class="frame A">
+      <div class="grid"></div><div class="glow"></div>
+      <div class="hero">
+        <div class="eyebrow">▸ agentic infrastructure for payments</div>
+        <h2>Orchestrate the agents that run payments.</h2>
+        <p class="sub">Design, run, and evolve multi-agent workflows on a real runtime — with live cost, guardrails, and channels.</p>
+        <div class="cta"><span class="btn primary">Open console →</span><span class="btn ghost">How it works</span></div>
+      </div>
+      <div class="console">
+        <div class="rail"><div class="it on">◆ Templates</div><div class="it">◎ Agents</div><div class="it">⟁ Workflows</div><div class="it">≡ History</div><div class="it">✈ Channels</div></div>
+        <div class="canvas">
+          <div class="node" style="left:18px;top:30px"><b>Telegram</b><span>CHANNEL</span></div>
+          <div class="node live" style="left:175px;top:64px"><b>Triage</b><span>AGENT · kimi</span></div>
+          <div class="node" style="left:330px;top:30px"><b>Refund</b><span>AGENT</span></div>
+          <div class="node" style="left:330px;top:120px"><b>Payment · AP2</b><span>TOOL</span></div>
+        </div>
+        <div class="mon"><div class="lab">live monitor</div><div class="big">1,128 tok</div>
+          <div class="ev">Triage replied · refund</div><div class="ev">$0.00041 · running total</div><div class="ev">Run completed ✓</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B ============ -->
+<div class="wrap dir">
+  <div class="dir-label"><span class="dir-num">DIRECTION B</span><span class="dir-name">Vault</span></div>
+  <div class="dir-tag">Refined light · editorial. Stripe-docs × a private-bank statement. Calm, premium, trustworthy.</div>
+  <div class="dir-grid">
+    <div class="spec">
+      <h4>Feels like</h4><p>Bank-grade credibility. Light mode signals maturity &amp; trust — strong for finance buyers.</p>
+      <h4>Palette</h4><div class="swatches"><i class="sw" style="background:#f5f2ec"></i><i class="sw" style="background:#fffdf9"></i><i class="sw" style="background:#14181c"></i><i class="sw" style="background:#0d6e54"></i><i class="sw" style="background:#caa24a"></i></div>
+      <h4>Type</h4><p>Fraunces (serif display) · General Sans · IBM Plex Mono</p>
+      <h4>Motion</h4><p>Restrained fades, serif underline reveals, gentle hovers.</p>
+      <h4>Best for</h4><p>Selling to payments/finance leadership; differentiation via light + serif.</p>
+    </div>
+    <div class="frame B">
+      <div class="hero">
+        <div class="eyebrow">Agentic infrastructure · payments</div>
+        <h2>The control plane for <em>agentic</em> payment operations.</h2>
+        <p class="sub">Build, test, fine-tune, deploy and evolve AI agents on a real runtime — governed, observable, and connected to your channels.</p>
+        <div class="cta"><span class="btn primary">Open the console</span><span class="btn ghost">View pricing</span></div>
+      </div>
+      <div class="rule"></div>
+      <div class="console">
+        <div class="rail"><div class="it on">Templates</div><div class="it">Agents</div><div class="it">Workflows</div><div class="it">History</div><div class="it">Channels</div></div>
+        <div class="canvas">
+          <div class="node" style="left:18px;top:30px"><b>Telegram</b><span>channel</span></div>
+          <div class="node live" style="left:175px;top:64px"><b>Triage</b><span>agent · kimi</span></div>
+          <div class="node" style="left:330px;top:30px"><b>Refund</b><span>agent</span></div>
+          <div class="node" style="left:330px;top:120px"><b>Payment · AP2</b><span>tool</span></div>
+        </div>
+        <div class="mon"><div class="lab">live monitor</div><div class="big">1,128 tok</div>
+          <div class="ev">Triage replied · refund</div><div class="ev">$0.00041 · running total</div><div class="ev">Run completed</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C ============ -->
+<div class="wrap dir">
+  <div class="dir-label"><span class="dir-num">DIRECTION C</span><span class="dir-name">Control Room</span></div>
+  <div class="dir-tag">Technical mono · Swiss grid. A Bloomberg/ops terminal for agents. Dense, engineered, developer-credible.</div>
+  <div class="dir-grid">
+    <div class="spec">
+      <h4>Feels like</h4><p>An operations control room. Monospace, hairline grid, tickers — “serious operators run agents here.”</p>
+      <h4>Palette</h4><div class="swatches"><i class="sw" style="background:#0b0b0c"></i><i class="sw" style="background:#141416"></i><i class="sw" style="background:#c6f24e"></i><i class="sw" style="background:#ff8a3d"></i><i class="sw" style="background:#f2f2ee"></i></div>
+      <h4>Type</h4><p>Archivo (heavy display) · Space Mono (everything technical)</p>
+      <h4>Motion</h4><p>Scrolling ticker, blinking cursor, tabular data, sharp state flips.</p>
+      <h4>Best for</h4><p>Maximum distinctiveness &amp; “engineering” signal; boldest, most memorable.</p>
+    </div>
+    <div class="frame C">
+      <div class="ticker"><span>RUNS <b>+12</b></span><span>TOKENS <b>1.13K</b></span><span>COST <b>$0.0004</b></span><span>AGENTS <b>4</b></span><span>CHANNEL <b>TELEGRAM·LIVE</b></span><span>RUNTIME <b>LANGGRAPH</b></span><span>STATUS <b>OK</b></span></div>
+      <div class="hero">
+        <div class="eyebrow">[ agentic infrastructure / payments ]</div>
+        <h2>Run agents like operations.</h2>
+        <p class="sub">// design, deploy &amp; evolve multi-agent workflows on a real runtime. live cost. hard guardrails. every token accounted for.<span class="blink" style="color:#c6f24e">█</span></p>
+        <div class="cta"><span class="btn primary">OPEN CONSOLE</span><span class="btn ghost">HOW IT WORKS</span></div>
+      </div>
+      <div class="console">
+        <div class="rail"><div class="it on">TEMPLATES</div><div class="it">AGENTS</div><div class="it">WORKFLOWS</div><div class="it">HISTORY</div><div class="it">CHANNELS</div></div>
+        <div class="canvas">
+          <div class="node" style="left:18px;top:30px"><b>Telegram</b><span>CHANNEL</span></div>
+          <div class="node live" style="left:175px;top:64px"><b>Triage</b><span>AGENT·KIMI</span></div>
+          <div class="node" style="left:330px;top:30px"><b>Refund</b><span>AGENT</span></div>
+          <div class="node" style="left:330px;top:120px"><b>PAYMENT·AP2</b><span>TOOL</span></div>
+        </div>
+        <div class="mon"><div class="lab">LIVE_MONITOR</div><div class="big">1,128</div>
+          <div class="ev">triage → refund</div><div class="ev">tok 1128 · $0.00041</div><div class="ev">run.completed=true</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap verdict">
+  <h3>My recommendation</h3>
+  <p><strong style="color:#eaf0f7">B · Vault</strong> for the public landing/pricing (light + serif reads most “enterprise / finance-grade” and differentiates from every dark AI-tool clone), paired with <strong style="color:#eaf0f7">A · Midnight Ledger</strong> for the console (operators live in a focused dark workspace). It’s the classic premium-SaaS move: editorial light marketing, instrument-grade dark product. <strong style="color:#eaf0f7">C · Control Room</strong> is the boldest single-aesthetic play if you want the whole thing to scream “engineering.”</p>
+  <div class="pick">
+    <span class="chip">A — all dark (least work)</span>
+    <span class="chip">B+A — light marketing + dark console (recommended)</span>
+    <span class="chip">C — control-room everywhere (boldest)</span>
+    <span class="chip">mix / tweak</span>
+  </div>
+</div>
+
+</body>
+</html>
