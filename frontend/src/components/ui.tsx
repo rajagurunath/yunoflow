@@ -1,10 +1,10 @@
 import React from "react";
 
-export function Panel({ className = "", children, style }: {
-  className?: string; children: React.ReactNode; style?: React.CSSProperties;
+export function Panel({ className = "", children, style, onClick }: {
+  className?: string; children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void;
 }) {
   return (
-    <div style={style} className={`rounded-2xl border border-line bg-bg2/70 backdrop-blur-md ${className}`}>
+    <div style={style} onClick={onClick} className={`rounded-2xl border border-line bg-bg2/70 backdrop-blur-md ${className}`}>
       {children}
     </div>
   );
