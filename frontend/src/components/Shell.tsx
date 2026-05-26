@@ -1,5 +1,6 @@
 import React from "react";
 import type { View } from "../App";
+import { YunoMark } from "./YunoMark";
 
 // [view, glyph, label, one-line description]
 const NAV: [View, string, string, string][] = [
@@ -17,12 +18,10 @@ export function Shell({ view, setView, children, onSignOut }: {
     <div className="theme-light relative flex h-screen bg-bg0">
       <nav className="relative z-10 flex w-52 flex-col gap-1 border-r border-line bg-bg2/80 p-3">
         <div className="mb-3 flex items-center gap-2.5 px-1">
-          <div className="grid h-8 w-8 place-items-center rounded-lg grad shadow-glow">
-            <span className="block h-3 w-3 rotate-45 rounded-[2px] border-2 border-[#04110d]" />
-          </div>
+          <YunoMark className="h-8 w-8 shadow-glow rounded-lg" />
           <div className="leading-tight">
-            <div className="font-disp text-sm font-semibold">orchestra</div>
-            <div className="font-mono text-[9px] uppercase tracking-wider text-t2">by yuno</div>
+            <div className="font-disp text-sm font-semibold">YunoFlow</div>
+            <div className="font-mono text-[9px] uppercase tracking-wider text-t2">agent console</div>
           </div>
         </div>
 

@@ -1,11 +1,9 @@
+import { YunoMark } from "./YunoMark";
+
 export type PublicPage = "landing" | "pricing";
 
 function Mark() {
-  return (
-    <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink">
-      <span className="block h-3 w-3 rotate-45 rounded-[2px] border-2" style={{ borderColor: "#15936f" }} />
-    </span>
-  );
+  return <YunoMark className="h-8 w-8" />;
 }
 
 export function PublicNav({ onNav, onSignIn, current }: {
@@ -17,8 +15,7 @@ export function PublicNav({ onNav, onSignIn, current }: {
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6">
         <button onClick={() => onNav("landing")} className="flex items-center gap-2.5">
           <Mark />
-          <span className="font-serif text-lg font-semibold tracking-tight text-ink">orchestra</span>
-          <span className="hidden rounded-full border border-vline2 px-2 py-0.5 font-plex text-[10px] uppercase tracking-wider text-inkmut sm:inline">by yuno</span>
+          <span className="font-serif text-lg font-semibold tracking-tight text-ink">YunoFlow</span>
         </button>
         <nav className="hidden flex-1 items-center gap-7 md:flex">
           <a href="#how" onClick={() => onNav("landing")} className={link}>How it works</a>
@@ -47,7 +44,7 @@ export function PublicFooter({ onNav, onSignIn }: { onNav: (p: PublicPage) => vo
         <div className="col-span-2 md:col-span-1">
           <div className="flex items-center gap-2.5">
             <Mark />
-            <span className="font-serif text-base font-semibold text-ink">orchestra</span>
+            <span className="font-serif text-base font-semibold text-ink">YunoFlow</span>
           </div>
           <p className="mt-3 max-w-[15rem] text-sm text-inkmut">
             The lifecycle platform for agentic systems — built for payments teams.
@@ -75,7 +72,7 @@ export function PublicFooter({ onNav, onSignIn }: { onNav: (p: PublicPage) => vo
       </div>
       <div className="border-t border-vline">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-5 text-center md:flex-row md:text-left">
-          <span className="font-plex text-[11px] text-inkdim">© 2026 Orchestra · A demo built for the Yuno AI Engineer hiring challenge.</span>
+          <span className="font-plex text-[11px] text-inkdim">© 2026 YunoFlow · A demo built for the Yuno AI Engineer hiring challenge.</span>
           <span className="font-plex text-[11px] text-inkdim">Not affiliated with Yuno · illustrative pricing</span>
         </div>
       </div>

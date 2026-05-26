@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { OrchestrationDiagram } from "../components/OrchestrationDiagram";
+import { HeroShowcase } from "../components/HeroShowcase";
 import { PublicFooter, PublicNav, type PublicPage } from "../components/PublicChrome";
 
 const CLIENTS = ["inDrive", "McDonald's", "Rappi", "Viva Aerobús", "Avianca"];
@@ -13,7 +14,7 @@ const LIFECYCLE = [
 ];
 
 const STEPS = [
-  { n: "01", t: "Describe it, or design it", d: "Type or speak what you need and Orchestra drafts the agents and the graph — or build it node-by-node on the visual canvas with conditions and feedback loops." },
+  { n: "01", t: "Describe it, or design it", d: "Type or speak what you need and YunoFlow drafts the agents and the graph — or build it node-by-node on the visual canvas with conditions and feedback loops." },
   { n: "02", t: "Run on a real runtime", d: "Agents execute on a LangGraph runtime, call real tools, and communicate with each other — pausing for human input exactly when they need it." },
   { n: "03", t: "Connect your channels", d: "Bind a workflow to Telegram (Slack & WhatsApp next) so customers and ops teams talk to your agents conversationally, 24/7." },
   { n: "04", t: "Monitor, control & evolve", d: "Stream every message, token and dollar live. Enforce per-agent guardrails. Learn from outcomes and redeploy in minutes." },
@@ -92,7 +93,7 @@ export function Landing({ onNav, onSignIn }: { onNav: (p: PublicPage) => void; o
               Build, evolve, and ship the <em className="italic text-emerald-grad">AI agents</em> that run your payment operations.
             </h1>
             <p className="fade-up mt-6 max-w-xl text-lg leading-relaxed text-inkmut" style={{ animationDelay: ".2s" }}>
-              Orchestra is the complete lifecycle platform for agentic systems — design multi-agent
+              YunoFlow is the complete lifecycle platform for agentic systems — design multi-agent
               workflows, test them, fine-tune on your data, deploy to real channels, and watch them
               improve. Scale your operations faster than headcount.
             </p>
@@ -111,7 +112,7 @@ export function Landing({ onNav, onSignIn }: { onNav: (p: PublicPage) => void; o
           </div>
 
           <div className="fade-up" style={{ animationDelay: ".22s" }}>
-            <ProductPreview caption="orchestra · payments support" />
+            <HeroShowcase />
           </div>
         </div>
       </section>
@@ -129,7 +130,7 @@ export function Landing({ onNav, onSignIn }: { onNav: (p: PublicPage) => void; o
       {/* Lifecycle */}
       <Section id="lifecycle" eyebrow="One platform, the full lifecycle"
         title="From idea to evolving production agents."
-        intro="Most tools stop at building. Orchestra carries an agent through its entire life — and keeps it improving as the problem changes.">
+        intro="Most tools stop at building. YunoFlow carries an agent through its entire life — and keeps it improving as the problem changes.">
         <div className="relative mt-10">
           <div className="absolute left-0 right-0 top-7 hidden h-px bg-vline md:block" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-5">

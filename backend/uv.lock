@@ -3120,7 +3120,7 @@ wheels = [
 ]
 
 [[package]]
-name = "yuno-orchestrator"
+name = "yunoflow"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

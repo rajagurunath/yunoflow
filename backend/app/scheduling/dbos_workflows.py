@@ -27,7 +27,7 @@ def init_dbos() -> bool:
     try:
         from dbos import DBOS
 
-        DBOS(config={"name": "yuno-orchestrator", "database_url": settings.checkpoint_db_uri})
+        DBOS(config={"name": "yunoflow", "database_url": settings.checkpoint_db_uri})
         _register_workflows()
         DBOS.launch()
         _launched = True

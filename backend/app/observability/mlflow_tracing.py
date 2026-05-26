@@ -18,7 +18,7 @@ def setup_mlflow() -> None:
         import mlflow
 
         mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
-        mlflow.set_experiment("yuno-orchestrator")
+        mlflow.set_experiment("yunoflow")
         mlflow.langchain.autolog(log_traces=True)
         log.info("mlflow.autolog_enabled", uri=settings.mlflow_tracking_uri)
     except Exception as exc:  # noqa: BLE001

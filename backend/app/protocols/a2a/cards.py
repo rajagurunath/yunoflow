@@ -1,7 +1,7 @@
 """A2A Agent Card construction (discovery layer).
 
 Exposes each agent as an A2A-discoverable Agent Card following the public A2A
-schema (https://a2a-protocol.org). This makes Orchestra agents addressable by
+schema (https://a2a-protocol.org). This makes YunoFlow agents addressable by
 other A2A-speaking systems. Full JSON-RPC task execution over A2A is a
 documented future direction (the a2a-sdk 1.x runtime is Protobuf-backed).
 """

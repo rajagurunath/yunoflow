@@ -1,5 +1,5 @@
-const TOKEN_KEY = "orchestra.token";
-const USER_KEY = "orchestra.user";
+const TOKEN_KEY = "yunoflow.token";
+const USER_KEY = "yunoflow.user";
 
 export const auth = {
   token: () => localStorage.getItem(TOKEN_KEY),

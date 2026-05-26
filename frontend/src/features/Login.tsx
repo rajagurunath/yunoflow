@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { auth } from "../lib/auth";
 import { OrchestrationDiagram } from "../components/OrchestrationDiagram";
+import { YunoMark } from "../components/YunoMark";
 
 export function Login({ onSuccess, onBack }: { onSuccess: () => void; onBack: () => void }) {
   const [username, setUsername] = useState("admin");
@@ -28,11 +29,8 @@ export function Login({ onSuccess, onBack }: { onSuccess: () => void; onBack: ()
       {/* Brand panel — deep ink (the dark product side) */}
       <div className="relative hidden flex-col justify-between overflow-hidden bg-ink p-10 text-paper lg:flex">
         <button onClick={onBack} className="flex items-center gap-2.5 self-start">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-paper/10">
-            <span className="block h-3 w-3 rotate-45 rounded-[2px] border-2" style={{ borderColor: "#5fe0b8" }} />
-          </span>
-          <span className="font-serif text-lg font-semibold">orchestra</span>
-          <span className="rounded-full border border-white/15 px-2 py-0.5 font-plex text-[10px] uppercase tracking-wider text-white/50">by yuno</span>
+          <YunoMark className="h-8 w-8" />
+          <span className="font-serif text-lg font-semibold">YunoFlow</span>
         </button>
 
         <div className="max-w-md">
@@ -54,10 +52,8 @@ export function Login({ onSuccess, onBack }: { onSuccess: () => void; onBack: ()
       <div className="relative flex items-center justify-center p-6">
         <form onSubmit={submit} className="relative z-10 w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink">
-              <span className="block h-3 w-3 rotate-45 rounded-[2px] border-2" style={{ borderColor: "#15936f" }} />
-            </span>
-            <span className="font-serif text-lg font-semibold text-ink">orchestra</span>
+            <YunoMark className="h-8 w-8" />
+            <span className="font-serif text-lg font-semibold text-ink">YunoFlow</span>
           </div>
 
           <h1 className="font-serif text-3xl font-semibold text-ink">Sign in to the console</h1>

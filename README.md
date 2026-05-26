@@ -1,4 +1,4 @@
-# Orchestra — AI Agent Orchestration Platform
+# YunoFlow — AI Agent Orchestration Platform
 
 > Submission for the Yuno AI Engineer Challenge.
 > Create AI agents, configure how they behave, connect them into collaborative
