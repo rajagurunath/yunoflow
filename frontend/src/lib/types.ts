@@ -36,4 +36,5 @@ export interface ChannelBinding {
   id: string; channel_type: string;
   agent_id: string | null; workflow_id: string | null;
   external_chat_id: string | null; active: boolean; created_at: string;
+  bot_username?: string | null; label?: string | null; has_token?: boolean;
 }

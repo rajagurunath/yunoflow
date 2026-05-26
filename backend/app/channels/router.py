@@ -66,27 +66,44 @@ class ChannelRouter:
                 return wf
         return await self._demo_workflow(s)
 
-    async def _latest_waiting_for_chat(self, s, external_chat_id: str) -> WorkflowRun | None:
+    async def _latest_waiting_for_chat(self, s, external_chat_id: str,
+                                       workflow_id=None) -> WorkflowRun | None:
         stmt = (
             select(WorkflowRun)
             .join(Message, Message.run_id == WorkflowRun.id)
             .where(WorkflowRun.status == "waiting_human", Message.external_chat_id == external_chat_id)
-            .order_by(WorkflowRun.created_at.desc())
-            .limit(1)
         )
+        # A dedicated bot only resumes runs of its own workflow, so two bots
+        # talking to the same Telegram user can't cross-wire their conversations.
+        if workflow_id is not None:
+            stmt = stmt.where(WorkflowRun.workflow_id == workflow_id)
+        stmt = stmt.order_by(WorkflowRun.created_at.desc()).limit(1)
         return (await s.execute(stmt)).scalars().first()
 
-    async def handle_inbound(self, m: InboundMessage) -> None:
+    async def handle_inbound(self, m: InboundMessage, send: SendFn | None = None,
+                             workflow_id=None) -> None:
+        """Route one inbound message.
+
+        `send` overrides the reply transport (a dedicated bot replies through
+        itself); `workflow_id` pins the workflow (a dedicated bot always runs
+        the one it's bound to). With both omitted, this is the shared default
+        bot: reply via `self.send`, pick the workflow via ChannelBinding.
+        """
+        send_fn = send or self.send
+
         async def reply(text: str) -> None:
-            await self.send(m.external_chat_id, text)
+            await send_fn(m.external_chat_id, text)
 
         async with self.sf() as s:
-            waiting = await self._latest_waiting_for_chat(s, m.external_chat_id)
+            waiting = await self._latest_waiting_for_chat(s, m.external_chat_id, workflow_id)
             if waiting is not None:
                 wf = await s.get(Workflow, waiting.workflow_id)
                 graph, _ = await build_graph_for_workflow(s, wf, self.executor.cp)
             else:
-                wf = await self._resolve_workflow(s, m.channel_type, m.external_chat_id)
+                if workflow_id is not None:
+                    wf = await s.get(Workflow, workflow_id) or await self._demo_workflow(s)
+                else:
+                    wf = await self._resolve_workflow(s, m.channel_type, m.external_chat_id)
                 graph, _ = await build_graph_for_workflow(s, wf, self.executor.cp)
                 wf_id = wf.id
 

@@ -3,7 +3,11 @@ import type {
 } from "./types";
 
 async function j<T>(r: Response): Promise<T> {
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  if (!r.ok) {
+    let msg = `${r.status} ${r.statusText}`;
+    try { const b = await r.json(); if (b?.detail) msg = b.detail; } catch { /* keep status */ }
+    throw new Error(msg);
+  }
   return (r.status === 204 ? null : await r.json()) as T;
 }
 const post = (url: string, body?: unknown) =>
@@ -13,6 +17,11 @@ const post = (url: string, body?: unknown) =>
 export const api = {
   listAgents: () => fetch("/api/agents").then(j<Agent[]>),
   createAgent: (a: Partial<Agent>) => post("/api/agents", a).then(j<Agent>),
+  updateAgent: (id: string, a: Partial<Agent>) =>
+    fetch(`/api/agents/${id}`, {
+      method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify(a),
+    }).then(j<Agent>),
   deleteAgent: (id: string) => fetch(`/api/agents/${id}`, { method: "DELETE" }).then(() => null),
   tools: () => fetch("/api/tools").then(j<ToolSpec[]>),
 
@@ -40,7 +49,7 @@ export const api = {
 
   listChannels: () => fetch("/api/channels").then(j<ChannelBinding[]>),
   channelStatus: () => fetch("/api/channels/status").then(j<Record<string, any>>),
-  createChannel: (b: { channel_type: string; workflow_id: string }) =>
+  createChannel: (b: { channel_type: string; workflow_id: string; bot_token?: string; label?: string }) =>
     post("/api/channels", b).then(j<ChannelBinding>),
   deleteChannel: (id: string) => fetch(`/api/channels/${id}`, { method: "DELETE" }).then(() => null),
 };

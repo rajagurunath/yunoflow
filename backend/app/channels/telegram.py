@@ -9,6 +9,21 @@ from app.core.logging import get_logger
 log = get_logger(__name__)
 
 
+async def validate_token(token: str) -> str:
+    """Confirm a bot token works and return its @username (no leading @).
+
+    Raises on an invalid token so the API can reject it before persisting.
+    """
+    from aiogram import Bot
+
+    bot = Bot(token)
+    try:
+        me = await bot.get_me()
+        return me.username or ""
+    finally:
+        await bot.session.close()
+
+
 class TelegramChannel(Channel):
     channel_type = "telegram"
 
