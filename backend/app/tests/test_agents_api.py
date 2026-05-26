@@ -4,13 +4,14 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.core.config import settings
 from app.main import app
 
 FULL_AGENT = {
     "name": "Full Config Agent",
     "role": "exercises every dimension",
     "system_prompt": "You are a thorough agent.",
-    "model": "gpt-4o-mini",
+    "model": settings.llm_model,
     "temperature": 0.3,
     "top_p": 0.9,
     "tools": ["calculator", "read_kb"],

@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # LLM (OpenAI-compatible)
     llm_base_url: str = "https://api.openai.com/v1"
     llm_api_key: str = ""
-    llm_model: str = "gpt-4o-mini"
+    llm_model: str = "moonshotai/Kimi-K2.6"  # io.net default; override via LLM_MODEL
     llm_price_in: float = 0.00015
     llm_price_out: float = 0.0006
 
