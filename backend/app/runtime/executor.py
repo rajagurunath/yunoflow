@@ -78,7 +78,15 @@ class Executor:
         total_cost = 0.0
         question: str | None = None
         try:
-            async for mode, chunk in graph.astream(inp, cfg, stream_mode=["updates"]):
+            async for mode, chunk in graph.astream(inp, cfg, stream_mode=["updates", "debug"]):
+                # The "debug" stream fires a "task" event the instant a node *starts*
+                # (before "updates"), giving us the live "node is running" highlight.
+                if mode == "debug":
+                    if isinstance(chunk, dict) and chunk.get("type") == "task":
+                        name = (chunk.get("payload") or {}).get("name")
+                        if name:
+                            await self._event(run_id, "node_enter", {"node_id": name})
+                    continue
                 if mode != "updates" or not chunk:
                     continue
                 for node_id, update in chunk.items():

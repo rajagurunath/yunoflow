@@ -42,6 +42,7 @@ function describeEvent(e: WSEvent): { icon: string; title: string; detail?: stri
   const node = e.data?.node_id;
   switch (e.type) {
     case "run_started": return { icon: "▶", title: "Run started", tone: "mint" };
+    case "node_enter": return { icon: "▷", title: `Step running${node ? ` — ${node}` : ""}`, tone: "cyan" };
     case "node_exit": return { icon: "✓", title: `Step finished${node ? ` — ${node}` : ""}`, tone: "t2" };
     case "agent_message":
       return { icon: "💬", title: `${node || "agent"} replied`, detail: e.data?.content, tone: "mint" };
@@ -209,6 +210,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
     wsRef.current?.close();
     wsRef.current = openRunSocket(r.id, (e) => {
       setEvents((prev) => [...prev, e]);
+      if (e.type === "node_enter" && e.data?.node_id) markNode(e.data.node_id, "running");
       if ((e.type === "node_exit" || e.type === "agent_message") && e.data?.node_id) markNode(e.data.node_id, "done");
       if (e.type === "token_usage") setHud({ tokens: e.data.cumulative_tokens, cost: e.data.cumulative_cost_usd, status: "running" });
       if (e.type === "run_completed") setHud((h) => ({ ...h, status: "completed" }));
