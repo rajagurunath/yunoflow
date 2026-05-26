@@ -16,3 +16,4 @@ class Workflow(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
     graph_json: Mapped[dict] = mapped_column(JSONType, default=dict)  # ReactFlow {nodes, edges}
+    schedule_cron: Mapped[str | None] = mapped_column(String(120), nullable=True)  # cron → auto-run

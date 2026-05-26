@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import type { Message, Run } from "../lib/types";
+import type { Message, MetricsSummary, Run } from "../lib/types";
 import { Panel, Pill, statusTone } from "../components/ui";
 
 const ROLE: Record<string, string> = {
@@ -14,13 +14,17 @@ export function MessageHistory() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => { api.listRuns().then(setRuns).catch((e) => setErr(String(e))); }, []);
+  useEffect(() => { api.metrics().then(setMetrics).catch(() => {}); }, []);
   useEffect(() => { if (sel) api.runMessages(sel).then(setMessages).catch(() => {}); }, [sel]);
 
   return (
-    <div className="grid h-full grid-cols-[340px_1fr] overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
+      <MetricsStrip m={metrics} />
+      <div className="grid min-h-0 flex-1 grid-cols-[340px_1fr] overflow-hidden">
       <div className="overflow-auto border-r border-line p-4">
         <h1 className="font-disp text-lg">Runs</h1>
         <p className="mt-1 text-xs text-t2">Persisted message history.</p>
@@ -67,6 +71,36 @@ export function MessageHistory() {
           </div>
         )}
       </div>
+      </div>
+    </div>
+  );
+}
+
+function MetricsStrip({ m }: { m: MetricsSummary | null }) {
+  const pct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
+  const tiles: [string, string, string][] = m ? [
+    ["Completion rate", pct(m.completion_rate), `${m.runs_completed}/${m.runs_completed + m.runs_failed} runs`],
+    ["Agent↔agent msgs", m.agent_messages.toLocaleString(), "delivered"],
+    ["Total runs", String(m.runs_total), `${m.runs_running} active · ${m.runs_waiting} waiting`],
+    ["Avg run", m.avg_run_seconds == null ? "—" : `${m.avg_run_seconds}s`, "end-to-end"],
+    ["Tokens", m.tokens_total.toLocaleString(), `$${m.cost_total.toFixed(4)}`],
+    ["Agents", String(m.agents), `${m.scheduled} scheduled`],
+    ["Workflows", String(m.workflows), "built"],
+    ["Config dims / agent", String(m.agent_dimensions), "tunable"],
+  ] : [];
+  return (
+    <div className="flex items-stretch gap-px overflow-x-auto border-b border-line bg-bg2/40">
+      <div className="flex shrink-0 items-center px-4 font-mono text-[10px] uppercase tracking-wider text-t3">
+        impact<br />metrics
+      </div>
+      {tiles.map(([label, value, sub]) => (
+        <div key={label} className="shrink-0 px-4 py-3">
+          <div className="font-mono text-[10px] uppercase tracking-wide text-t2">{label}</div>
+          <div className="font-disp text-xl text-t0">{value}</div>
+          <div className="font-mono text-[10px] text-t3">{sub}</div>
+        </div>
+      ))}
+      {!m && <div className="px-4 py-3 text-sm text-t3">loading metrics…</div>}
     </div>
   );
 }

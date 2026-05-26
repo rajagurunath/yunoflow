@@ -49,3 +49,27 @@ async def build_graph_for_workflow(db, workflow, checkpointer, agent_ids=None):
     if len(rows) < 2:
         raise AppError("need at least 2 agents to run", code="insufficient_agents", status_code=422)
     return build_fixed_graph(rows[0], rows[1], checkpointer), list(rows)
+
+
+def build_single_agent_graph(agent, checkpointer):
+    """Compile a minimal start → agent → end graph for one agent.
+
+    Used by the scheduler so an agent's `schedule_cron` runs the agent on its own.
+    """
+    aid = str(agent.id)
+    graph_def = GraphJSON.model_validate({
+        "nodes": [
+            {"id": "start", "type": "start"},
+            {"id": "agent", "type": "agent", "data": {"agent_id": aid}},
+            {"id": "end", "type": "end"},
+        ],
+        "edges": [
+            {"id": "e1", "source": "start", "target": "agent"},
+            {"id": "e2", "source": "agent", "target": "end"},
+        ],
+    })
+    return compile_graph(
+        graph_def, agents={aid: agent}, checkpointer=checkpointer,
+        llm_factory=llm.build_chat_model, tool_resolver=registry.resolve,
+        known_tools=set(registry.REGISTRY),
+    )

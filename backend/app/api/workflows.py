@@ -13,6 +13,7 @@ from app.core.errors import AppError, NotFoundError
 from app.models import Agent, Workflow
 from app.runtime.compiler import validate
 from app.runtime.generator import generate_workflow_spec, spec_to_graph_json
+from app.scheduling import scheduler as sched
 from app.schemas.graph import GraphJSON, ValidationResult
 from app.schemas.workflow import GenerateRequest, WorkflowCreate, WorkflowRead, WorkflowUpdate
 
@@ -30,6 +31,8 @@ async def create_workflow(body: WorkflowCreate, db: AsyncSession = Depends(get_d
     db.add(wf)
     await db.commit()
     await db.refresh(wf)
+    if wf.schedule_cron:
+        sched.schedule_workflow(wf.id, wf.schedule_cron)
     return wf
 
 
@@ -87,6 +90,10 @@ async def update_workflow(workflow_id: uuid.UUID, body: WorkflowUpdate,
         setattr(wf, key, value)
     await db.commit()
     await db.refresh(wf)
+    if wf.schedule_cron:
+        sched.schedule_workflow(wf.id, wf.schedule_cron)
+    else:
+        sched.unschedule_workflow(wf.id)
     return wf
 
 
@@ -97,6 +104,7 @@ async def delete_workflow(workflow_id: uuid.UUID, db: AsyncSession = Depends(get
         raise NotFoundError(f"workflow {workflow_id} not found")
     await db.delete(wf)
     await db.commit()
+    sched.unschedule_workflow(workflow_id)
 
 
 @router.post("/{workflow_id}/validate", response_model=ValidationResult)

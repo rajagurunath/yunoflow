@@ -71,6 +71,8 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [hud, setHud] = useState({ tokens: 0, cost: 0, status: "" });
   const [message, setMessage] = useState("I was charged twice for order #A123 — please refund the duplicate.");
   const [editStatus, setEditStatus] = useState("");
+  const [cron, setCron] = useState("");
+  const [schedMsg, setSchedMsg] = useState("");
   const [agents, setAgents] = useState<Agent[]>([]);
   const [monitor, setMonitor] = useState<"normal" | "wide" | "closed">("normal");
   const wsRef = useRef<WebSocket | null>(null);
@@ -178,6 +180,18 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
     setEditStatus(r.ok ? "valid ✓" : `${r.errors.length} error(s): ${r.errors.map((e: any) => e.message).join("; ")}`);
   };
 
+  const saveSchedule = async () => {
+    if (!wf) return;
+    setSchedMsg("saving…");
+    try {
+      const updated = await api.updateWorkflow(wf.id, { schedule_cron: cron.trim() || null });
+      setWf(updated);
+      setSchedMsg(updated.schedule_cron ? `scheduled · ${updated.schedule_cron}` : "schedule cleared");
+    } catch (e) {
+      setSchedMsg(`failed: ${e instanceof Error ? e.message : e}`);
+    }
+  };
+
   useEffect(() => { api.listWorkflows().then(setWorkflows).catch(() => {}); }, [run]);
 
   useEffect(() => {
@@ -191,6 +205,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
       allAgents.forEach((a) => { if (ids.includes(a.id)) byId[a.id] = a; });
       const rf = buildRF(w.graph_json, byId);
       setWf(w); setNodes(rf.nodes); setEdges(rf.edges);
+      setCron(w.schedule_cron ?? ""); setSchedMsg("");
       setEvents([]); setRun(null); setHud({ tokens: 0, cost: 0, status: "" });
     })();
     return () => wsRef.current?.close();
@@ -296,6 +311,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
           <Button variant="primary" onClick={start} disabled={hud.status === "running"}>▶ Run</Button>
           <Button onClick={save}>Save</Button>
           <Button onClick={validate}>Validate</Button>
+          {wf.schedule_cron && <Pill tone="mint">⏱ {wf.schedule_cron}</Pill>}
           {hud.status && <Pill tone={statusTone(hud.status)}>● {hud.status}</Pill>}
           {editStatus && <span className="font-mono text-[11px] text-t2">{editStatus}</span>}
         </div>
@@ -317,6 +333,21 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
             </button>
           ))}
           <span className="px-1 pt-1 font-mono text-[8px] text-t3">⌫ deletes selected</span>
+
+          <div className="mt-1 flex flex-col gap-1.5 border-t border-line pt-2">
+            <span className="px-1 font-mono text-[9px] uppercase tracking-wider text-t2">⏱ Schedule (cron)</span>
+            <input value={cron} onChange={(e) => setCron(e.target.value)} placeholder="0 9 * * *  (blank = off)"
+              className="rounded-md border border-line2 bg-bg1 px-2 py-1 font-mono text-[10px] text-t0 outline-none focus:border-mint/50" />
+            <div className="flex flex-wrap gap-1">
+              {[["0 9 * * *", "9am"], ["0 * * * *", "hourly"], ["*/15 * * * *", "15m"]].map(([expr, lbl]) => (
+                <button key={expr} onClick={() => setCron(expr)}
+                  className="rounded border border-line2 px-1.5 py-0.5 font-mono text-[9px] text-t1 hover:border-mint/40 hover:text-mint">{lbl}</button>
+              ))}
+            </div>
+            <button onClick={saveSchedule}
+              className="rounded-md grad px-2 py-1 text-[11px] font-bold text-white shadow-glow">Set schedule</button>
+            {schedMsg && <span className="px-1 font-mono text-[9px] text-t2">{schedMsg}</span>}
+          </div>
         </div>
 
         <ReactFlow

@@ -14,7 +14,9 @@ class WorkflowRun(Base, TimestampMixin):
     __tablename__ = "workflow_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    workflow_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workflows.id", ondelete="CASCADE"))
+    # nullable: a scheduled *agent* run isn't tied to a workflow
+    workflow_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workflows.id", ondelete="CASCADE"), nullable=True)
     # pending | running | waiting_human | completed | failed
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

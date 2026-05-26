@@ -1,5 +1,5 @@
 import type {
-  Agent, ChannelBinding, Message, Run, Template, ToolSpec, Workflow, WSEvent,
+  Agent, ChannelBinding, Message, MetricsSummary, Run, Template, ToolSpec, Workflow, WSEvent,
 } from "./types";
 
 async function j<T>(r: Response): Promise<T> {
@@ -39,6 +39,12 @@ export const api = {
       body: JSON.stringify({ graph_json }),
     }).then(j<Workflow>),
   validateWorkflow: (id: string) => post(`/api/workflows/${id}/validate`).then(j<any>),
+  updateWorkflow: (id: string, body: Partial<Workflow>) =>
+    fetch(`/api/workflows/${id}`, {
+      method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(j<Workflow>),
+  metrics: () => fetch("/api/metrics/summary").then(j<MetricsSummary>),
 
   createRun: (workflow_id: string, message: string) =>
     post("/api/runs", { workflow_id, input: { message } }).then(j<Run>),

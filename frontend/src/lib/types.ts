@@ -21,7 +21,18 @@ export interface RFEdge { id: string; source: string; target: string; data?: any
 export interface GraphJSON { nodes: RFNode[]; edges: RFEdge[] }
 
 export interface Template { id: string; name: string; description: string; graph_json: GraphJSON }
-export interface Workflow { id: string; name: string; description: string; graph_json: GraphJSON }
+export interface Workflow {
+  id: string; name: string; description: string; graph_json: GraphJSON;
+  schedule_cron?: string | null;
+}
+export interface MetricsSummary {
+  agent_dimensions: number; agents: number; workflows: number; scheduled: number;
+  runs_total: number; runs_completed: number; runs_failed: number;
+  runs_waiting: number; runs_running: number;
+  completion_rate: number | null; avg_run_seconds: number | null;
+  tokens_total: number; cost_total: number;
+  messages_total: number; agent_messages: number;
+}
 export interface Run {
   id: string; workflow_id: string; status: string;
   total_tokens: number; total_cost_usd: number; error?: string | null;

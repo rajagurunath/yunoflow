@@ -11,12 +11,14 @@ class WorkflowCreate(BaseModel):
     name: str
     description: str = ""
     graph_json: dict = Field(default_factory=dict)
+    schedule_cron: str | None = None
 
 
 class WorkflowUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     graph_json: dict | None = None
+    schedule_cron: str | None = None
 
 
 class GenerateRequest(BaseModel):
@@ -30,5 +32,6 @@ class WorkflowRead(BaseModel):
     name: str
     description: str
     graph_json: dict
+    schedule_cron: str | None = None
     created_at: datetime
     updated_at: datetime
