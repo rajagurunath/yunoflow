@@ -44,6 +44,7 @@ function Frame({ data, accent, glyph, inPort = true, outPort = true }: {
 export const AgentNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#12876a" glyph="◎" />;
 export const ConditionNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#b78a2e" glyph="⟁" />;
 export const ToolNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#1486a8" glyph="⚒" />;
+export const HumanNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#c2554d" glyph="✋" />;
 export const DeepAgentNode = ({ data }: { data: NodeData }) => <Frame data={data} accent="#0d6e54" glyph="❖" />;
 
 export const StartNode = ({ data }: { data: NodeData }) => (
@@ -63,6 +64,7 @@ export const nodeTypes = {
   agent: AgentNode,
   condition: ConditionNode,
   tool: ToolNode,
+  human: HumanNode,
   deepagent: DeepAgentNode,
   a2a_remote: DeepAgentNode,
   start: StartNode,

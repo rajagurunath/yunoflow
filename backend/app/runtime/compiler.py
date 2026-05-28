@@ -11,6 +11,7 @@ from app.core.errors import CompileError
 from app.runtime.nodes.agent_node import make_agent_node
 from app.runtime.nodes.condition_node import make_condition_node
 from app.runtime.nodes.deepagent_node import make_deepagent_node
+from app.runtime.nodes.human_node import make_human_node
 from app.runtime.nodes.tool_node import make_tool_node
 from app.runtime.state import AgentState
 from app.schemas.graph import GraphJSON, ValidationIssue, ValidationResult
@@ -121,6 +122,8 @@ def compile_graph(graph: GraphJSON, *, agents: dict, checkpointer,
             builder.add_node(n.id, make_condition_node(n.data, llm_factory))
         elif n.type == "tool":
             builder.add_node(n.id, make_tool_node(tool_resolver(n.data.get("tools", []))))
+        elif n.type == "human":
+            builder.add_node(n.id, make_human_node(n.data))
         elif n.type == "deepagent":
             builder.add_node(n.id, make_deepagent_node(agents[n.data["agent_id"]], llm_factory, tool_resolver))
         else:

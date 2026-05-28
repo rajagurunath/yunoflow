@@ -12,6 +12,7 @@ export function ChannelsView() {
   const [wfId, setWfId] = useState("");
   const [token, setToken] = useState("");
   const [label, setLabel] = useState("");
+  const [chatId, setChatId] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -32,11 +33,12 @@ export function ChannelsView() {
       const b = await api.createChannel({
         channel_type: "telegram", workflow_id: wfId,
         bot_token: token.trim() || undefined, label: label.trim() || undefined,
+        notify_chat_id: chatId.trim() || undefined,
       });
       setOk(b.has_token
         ? `Connected @${b.bot_username} → ${wfName(b.workflow_id)}`
         : `Bound ${wfName(b.workflow_id)} to the default bot`);
-      setToken(""); setLabel("");
+      setToken(""); setLabel(""); setChatId("");
       refresh();
     } catch (e) {
       setErr(String(e instanceof Error ? e.message : e));
@@ -90,6 +92,11 @@ export function ChannelsView() {
               onChange={(e) => setLabel(e.target.value)} />
           </label>
           <label className="flex flex-col gap-1.5 md:col-span-2">
+            <span className="font-mono text-[11px] uppercase tracking-wide text-t2">Approvals chat ID <span className="normal-case text-t3">(optional — where human-in-the-loop prompts are sent)</span></span>
+            <input className={`${input} font-mono`} value={chatId} placeholder="e.g. 123456789  (message the bot once and we capture this automatically)"
+              onChange={(e) => setChatId(e.target.value)} />
+          </label>
+          <label className="flex flex-col gap-1.5 md:col-span-2">
             <span className="font-mono text-[11px] uppercase tracking-wide text-t2">Bot token <span className="normal-case text-t3">(optional — leave blank to use the default bot)</span></span>
             <input className={`${input} font-mono`} value={token} type="password" autoComplete="off"
               placeholder="123456789:AA…  (from @BotFather)"
@@ -123,6 +130,9 @@ export function ChannelsView() {
               <span className="text-sm text-t1">→ {wfName(b.workflow_id)}</span>
               {!dedicated && (
                 <span className="font-mono text-[10px] text-t2">{b.external_chat_id ? `chat ${b.external_chat_id}` : "any chat"}</span>
+              )}
+              {b.notify_chat_id && (
+                <span className="font-mono text-[10px] text-coral">✋ approvals → {b.notify_chat_id}</span>
               )}
               <Pill tone={running ? "mint" : "t1"}>{running ? "● running" : "○ offline"}</Pill>
               <button className="ml-auto text-t3 hover:text-coral" title="Remove"

@@ -30,6 +30,7 @@ def _read(b: ChannelBinding) -> ChannelBindingRead:
         active=b.active, created_at=b.created_at,
         bot_username=cfg.get("bot_username"), label=cfg.get("label"),
         has_token=bool(cfg.get("bot_token")),
+        notify_chat_id=cfg.get("notify_chat_id"),
     )
 
 
@@ -43,6 +44,10 @@ async def list_bindings(db: AsyncSession = Depends(get_db)):
 async def create_binding(body: ChannelBindingCreate, request: Request,
                          db: AsyncSession = Depends(get_db)):
     config: dict = {}
+    if body.label:
+        config["label"] = body.label
+    if body.notify_chat_id:
+        config["notify_chat_id"] = body.notify_chat_id.strip()
     if body.bot_token:
         if settings.telegram_bot_token and body.bot_token == settings.telegram_bot_token:
             raise AppError("that token is already the shared default bot",
@@ -55,7 +60,7 @@ async def create_binding(body: ChannelBindingCreate, request: Request,
             log.warning("channel.token_invalid", error=str(exc))
             raise AppError("invalid Telegram bot token", code="invalid_token",
                            status_code=400) from exc
-        config = {"bot_token": body.bot_token, "bot_username": username, "label": body.label}
+        config.update({"bot_token": body.bot_token, "bot_username": username})
 
     binding = ChannelBinding(
         channel_type=body.channel_type, agent_id=body.agent_id,

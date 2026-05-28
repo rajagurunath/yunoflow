@@ -57,6 +57,7 @@ async def lifespan(app: FastAPI):
     from langchain_core.messages import HumanMessage
     from sqlalchemy import select
 
+    from app.channels.notify import workflow_notifier
     from app.core.db import SessionLocal
     from app.models import Agent, Workflow, WorkflowRun
     from app.runtime.builder import build_graph_for_workflow, build_single_agent_graph
@@ -86,9 +87,11 @@ async def lifespan(app: FastAPI):
 
         rlimit = recursion_limit_for(agents)
         max_tokens, max_cost = budget_for(agents)
+        # A scheduled workflow can still pause for human approval on Telegram.
+        on_reply = await workflow_notifier(wf_id, run_id)
         task = asyncio.create_task(executor.run(
             run_id, graph, {"messages": [HumanMessage(content=trigger)], "scratch": {}},
-            recursion_limit=rlimit, max_tokens=max_tokens, max_cost=max_cost))
+            on_reply=on_reply, recursion_limit=rlimit, max_tokens=max_tokens, max_cost=max_cost))
         app.state.tasks.add(task)
         task.add_done_callback(app.state.tasks.discard)
 

@@ -66,6 +66,26 @@ class ChannelRouter:
                 return wf
         return await self._demo_workflow(s)
 
+    async def _capture_chat(self, s, channel_type: str, external_chat_id: str,
+                            workflow_id) -> None:
+        """Remember this chat on the workflow's binding so console/scheduled runs
+        can push approval prompts here. Set once; never overwrites a chosen id."""
+        from app.models import ChannelBinding
+
+        if workflow_id is None:
+            return
+        binding = (await s.execute(
+            select(ChannelBinding)
+            .where(ChannelBinding.channel_type == channel_type,
+                   ChannelBinding.active.is_(True),
+                   ChannelBinding.workflow_id == workflow_id)
+            .order_by(ChannelBinding.created_at.desc()).limit(1)
+        )).scalars().first()
+        if binding is None or (binding.config_json or {}).get("notify_chat_id"):
+            return
+        binding.config_json = {**(binding.config_json or {}), "notify_chat_id": str(external_chat_id)}
+        await s.commit()
+
     async def _latest_waiting_for_chat(self, s, external_chat_id: str,
                                        workflow_id=None) -> WorkflowRun | None:
         stmt = (
@@ -106,6 +126,7 @@ class ChannelRouter:
                     wf = await self._resolve_workflow(s, m.channel_type, m.external_chat_id)
                 graph, _ = await build_graph_for_workflow(s, wf, self.executor.cp)
                 wf_id = wf.id
+                await self._capture_chat(s, m.channel_type, m.external_chat_id, wf_id)
 
         if waiting is not None:
             await self._persist_inbound(waiting.id, m)

@@ -15,6 +15,9 @@ class ChannelBindingCreate(BaseModel):
     # Omit it to bind against the shared default bot (TELEGRAM_BOT_TOKEN).
     bot_token: str | None = None
     label: str | None = None
+    # Telegram chat id to push approval prompts to for console/scheduled runs.
+    # Optional: also auto-captured the first time someone messages the bot.
+    notify_chat_id: str | None = None
 
 
 class ChannelBindingRead(BaseModel):
@@ -31,3 +34,4 @@ class ChannelBindingRead(BaseModel):
     bot_username: str | None = None
     label: str | None = None
     has_token: bool = False
+    notify_chat_id: str | None = None

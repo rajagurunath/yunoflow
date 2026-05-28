@@ -48,6 +48,7 @@ export const api = {
 
   createRun: (workflow_id: string, message: string) =>
     post("/api/runs", { workflow_id, input: { message } }).then(j<Run>),
+  resumeRun: (id: string, value: string) => post(`/api/runs/${id}/resume`, { value }).then(j<Run>),
   getRun: (id: string) => fetch(`/api/runs/${id}`).then(j<Run>),
   runMessages: (id: string) => fetch(`/api/runs/${id}/messages`).then(j<Message[]>),
   runEvents: (id: string) => fetch(`/api/runs/${id}/events`).then(j<WSEvent[]>),
@@ -55,7 +56,7 @@ export const api = {
 
   listChannels: () => fetch("/api/channels").then(j<ChannelBinding[]>),
   channelStatus: () => fetch("/api/channels/status").then(j<Record<string, any>>),
-  createChannel: (b: { channel_type: string; workflow_id: string; bot_token?: string; label?: string }) =>
+  createChannel: (b: { channel_type: string; workflow_id: string; bot_token?: string; label?: string; notify_chat_id?: string }) =>
     post("/api/channels", b).then(j<ChannelBinding>),
   deleteChannel: (id: string) => fetch(`/api/channels/${id}`, { method: "DELETE" }).then(() => null),
 };

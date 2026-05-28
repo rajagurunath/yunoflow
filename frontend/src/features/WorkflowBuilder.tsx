@@ -16,8 +16,11 @@ function buildRF(graph: GraphJSON, agentsById: Record<string, Agent>) {
   const nodes = g.nodes.map((n) => {
     const agent = n.data?.agent_id ? agentsById[n.data.agent_id] : undefined;
     const label = agent?.name
-      ?? (n.type === "condition" ? "Route" : n.type === "start" ? "start" : n.type === "end" ? "end" : n.id);
-    const sub = agent ? agent.model : n.type === "condition" ? (n.data?.mode ?? "router") : n.type;
+      ?? (n.type === "condition" ? "Route" : n.type === "human" ? "Human approval"
+          : n.type === "start" ? "start" : n.type === "end" ? "end" : n.id);
+    const sub = agent ? agent.model
+      : n.type === "condition" ? (n.data?.mode ?? "router")
+      : n.type === "human" ? "human-in-the-loop" : n.type;
     const branches = n.type === "condition" ? (n.data?.branches || []).map((b: any) => b.label) : undefined;
     // Honor a saved position if present, else fall back to auto-layout.
     const position = n.position && typeof n.position.x === "number" ? n.position : (pos[n.id] || { x: 0, y: 0 });
@@ -70,6 +73,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [events, setEvents] = useState<WSEvent[]>([]);
   const [hud, setHud] = useState({ tokens: 0, cost: 0, status: "" });
   const [message, setMessage] = useState("I was charged twice for order #A123 — please refund the duplicate.");
+  const [reply, setReply] = useState("");
   const [editStatus, setEditStatus] = useState("");
   const [cron, setCron] = useState("");
   const [schedMsg, setSchedMsg] = useState("");
@@ -124,13 +128,14 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
     const src: any =
       type === "agent" || type === "deepagent" ? { agent_id: agentId }
       : type === "condition" ? { mode: "llm", prompt: "Classify the request.", branches: [], default: null }
+      : type === "human" ? { prompt: "Human approval needed — review and reply to continue." }
       : {};
     setNodes((ns) => [...ns, {
       id, type,
       position: { x: 140 + (ns.length % 4) * 70, y: 120 + (ns.length % 5) * 60 },
       data: {
-        label: agent?.name ?? (type === "condition" ? "Route" : type),
-        sub: agent?.model ?? type, status: "idle",
+        label: agent?.name ?? (type === "condition" ? "Route" : type === "human" ? "Human approval" : type),
+        sub: agent?.model ?? (type === "human" ? "human-in-the-loop" : type), status: "idle",
         branches: type === "condition" ? [] : undefined, src,
       },
     }]);
@@ -214,6 +219,15 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const markNode = useCallback((id: string, status: string) => {
     setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, status } } : n)));
   }, [setNodes]);
+
+  // Answer a human-approval interrupt from the console (resumes the same run;
+  // the open WebSocket keeps streaming the continued run's events).
+  const sendReply = async () => {
+    if (!run || !reply.trim()) return;
+    setHud((h) => ({ ...h, status: "running" }));
+    await api.resumeRun(run.id, reply.trim());
+    setReply("");
+  };
 
   const start = async () => {
     if (!wf) return;
@@ -326,7 +340,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
             <option value="">＋ Agent…</option>
             {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
-          {[["condition", "＋ Condition"], ["tool", "＋ Tool"], ["start", "＋ Start"], ["end", "＋ End"]].map(([t, lbl]) => (
+          {[["condition", "＋ Condition"], ["human", "✋ Human approval"], ["tool", "＋ Tool"], ["start", "＋ Start"], ["end", "＋ End"]].map(([t, lbl]) => (
             <button key={t} onClick={() => addNode(t)}
               className="rounded-md border border-line2 px-2 py-1 text-left text-[11px] text-t1 hover:bg-bg3 hover:text-t0">
               {lbl}
@@ -390,6 +404,23 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
             <div><div className="font-mono text-[10px] text-t2">tokens</div><div className="font-mono text-sm text-mint">{hud.tokens.toLocaleString()}</div></div>
             <div><div className="font-mono text-[10px] text-t2">cost</div><div className="font-mono text-sm text-mint">${hud.cost.toFixed(4)}</div></div>
           </div>
+
+          {hud.status === "waiting_human" && (
+            <div className="border-b border-coral/30 bg-coral/5 px-4 py-3">
+              <div className="font-disp text-[13px] text-coral">✋ Human approval needed</div>
+              <div className="mt-0.5 whitespace-pre-wrap text-[12px] text-t1">
+                {[...events].reverse().find((e) => e.type === "interrupt")?.data?.value || "Reply to continue the run."}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input value={reply} onChange={(e) => setReply(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") sendReply(); }}
+                  placeholder="Type 'ok' to approve, or give instructions…"
+                  className="flex-1 rounded-lg border border-line2 bg-bg1 px-3 py-1.5 text-sm outline-none focus:border-mint/50" />
+                <Button variant="primary" onClick={sendReply} disabled={!reply.trim()}>Send reply</Button>
+              </div>
+              <div className="mt-1.5 font-mono text-[10px] text-t2">…or reply in Telegram if a bot is connected to this workflow.</div>
+            </div>
+          )}
 
           <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
             {events.length === 0 ? (

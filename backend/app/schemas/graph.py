@@ -8,6 +8,8 @@ The ReactFlow document IS the workflow definition. node.data is type-specific:
   condition -> {"mode": "llm"|"value"|"expr",
                 "branches": [{"label": "refund", "when"?: "..."}, ...],
                 "default"?: "info", "prompt"?: "...", "key"?: "...", "expr"?: "..."}
+  human     -> {"prompt"?: "..."}   pauses the run (interrupt) until a human
+               replies — over Telegram or the console resume endpoint
   deepagent -> {"agent_id": "<uuid>"}                  (P5)
   a2a_remote-> {"card_url": "http://..."}              (P5)
 
@@ -21,7 +23,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-NodeType = Literal["start", "end", "agent", "tool", "condition", "deepagent", "a2a_remote"]
+NodeType = Literal["start", "end", "agent", "tool", "condition", "human", "deepagent", "a2a_remote"]
 
 
 class RFNode(BaseModel):

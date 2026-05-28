@@ -26,6 +26,10 @@ def _agent(node_id, name, role, system_prompt, tools=None):
                                     "model": M, "tools": tools or []}}}
 
 
+def _human(node_id, prompt):
+    return {"id": node_id, "type": "human", "data": {"prompt": prompt}}
+
+
 def _payments_support_triage() -> dict:
     return {
         "nodes": [
@@ -110,6 +114,31 @@ def _payment_authorization() -> dict:
     }
 
 
+def _refund_with_approval() -> dict:
+    return {
+        "nodes": [
+            {"id": "start", "type": "start"},
+            _agent("triage", "Triage", "summarizes the refund request",
+                   "You read the customer's message and summarize the refund being requested "
+                   "(order, amount, reason) in one short paragraph for a human approver."),
+            _human("approval",
+                   "A refund was requested. Review the summary above and reply 'ok' to approve, "
+                   "or send instructions/changes for the agent to follow."),
+            _agent("refund", "Refund Specialist", "issues the approved refund",
+                   "You issue the refund the human approved, following any instructions they gave. "
+                   "Use the AP2 payment tools to create and execute the refund, then confirm to the customer.",
+                   tools=["read_kb", "create_payment_intent", "create_cart_mandate", "execute_payment"]),
+            {"id": "end", "type": "end"},
+        ],
+        "edges": [
+            {"id": "e1", "source": "start", "target": "triage"},
+            {"id": "e2", "source": "triage", "target": "approval"},
+            {"id": "e3", "source": "approval", "target": "refund"},
+            {"id": "e4", "source": "refund", "target": "end"},
+        ],
+    }
+
+
 def _dispute_investigator() -> dict:
     return {
         "nodes": [
@@ -142,6 +171,9 @@ TEMPLATES = [
     ("Payment Authorization (AP2)",
      "Risk-assess a payment then approve / step-up / decline using AP2-style mandates.",
      _payment_authorization()),
+    ("Refund Approval (Human-in-the-loop)",
+     "Triage a refund, pause for a human to approve over Telegram, then issue it with AP2 tools.",
+     _refund_with_approval()),
     ("Dispute Investigator (DeepAgent)",
      "A deep agent that plans, uses tools, and spawns sub-agents to investigate a payment dispute.",
      _dispute_investigator()),

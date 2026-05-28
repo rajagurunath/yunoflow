@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_executor
+from app.channels.notify import workflow_notifier
 from app.core.errors import NotFoundError
 from app.models import Message, Usage, Workflow, WorkflowRun
 from app.runtime.builder import build_graph_for_workflow
@@ -63,7 +64,10 @@ async def create_run(body: RunCreate, request: Request,
         "messages": [HumanMessage(content=body.input.message or "")],
         "scratch": dict(body.input.vars or {}),
     }
-    _spawn(request, executor.run(run.id, graph, initial,
+    # If this workflow has a Telegram chat bound, push interrupt questions / the
+    # final answer there too (so a console-started run can still be approved on chat).
+    on_reply = await workflow_notifier(wf.id, run.id)
+    _spawn(request, executor.run(run.id, graph, initial, on_reply=on_reply,
                                  recursion_limit=rlimit, max_tokens=max_tokens, max_cost=max_cost))
     return run
 
@@ -124,6 +128,7 @@ async def resume_run(run_id: uuid.UUID, body: ResumeRequest, request: Request,
     graph, agents = await build_graph_for_workflow(db, wf, executor.cp)
     rlimit = recursion_limit_for(agents)
     max_tokens, max_cost = budget_for(agents)
-    _spawn(request, executor.resume(run_id, graph, body.value,
+    on_reply = await workflow_notifier(run.workflow_id, run_id)
+    _spawn(request, executor.resume(run_id, graph, body.value, on_reply=on_reply,
                                     recursion_limit=rlimit, max_tokens=max_tokens, max_cost=max_cost))
     return run
