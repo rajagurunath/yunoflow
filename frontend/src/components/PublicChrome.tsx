@@ -1,6 +1,6 @@
 import { YunoMark } from "./YunoMark";
 
-export type PublicPage = "landing" | "pricing";
+export type PublicPage = "landing" | "pricing" | "docs";
 
 function Mark() {
   return <YunoMark className="h-8 w-8" />;
@@ -21,6 +21,7 @@ export function PublicNav({ onNav, onSignIn, current }: {
           <a href="#how" onClick={() => onNav("landing")} className={link}>How it works</a>
           <a href="#lifecycle" onClick={() => onNav("landing")} className={link}>Lifecycle</a>
           <a href="#usecases" onClick={() => onNav("landing")} className={link}>Use cases</a>
+          <button onClick={() => onNav("docs")} className={`${link} ${current === "docs" ? "text-ink" : ""}`}>Docs</button>
           <button onClick={() => onNav("pricing")} className={`${link} ${current === "pricing" ? "text-ink" : ""}`}>Pricing</button>
         </nav>
         <div className="ml-auto flex items-center gap-4 md:ml-0">
@@ -40,7 +41,7 @@ export function PublicFooter({ onNav, onSignIn }: { onNav: (p: PublicPage) => vo
   const link = "text-left text-sm text-inkmut transition hover:text-ink";
   return (
     <footer className="border-t border-vline bg-sand">
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-6 py-14 md:grid-cols-4">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-6 py-14 md:grid-cols-5">
         <div className="col-span-2 md:col-span-1">
           <div className="flex items-center gap-2.5">
             <Mark />
@@ -62,6 +63,13 @@ export function PublicFooter({ onNav, onSignIn }: { onNav: (p: PublicPage) => vo
           <button className={link} onClick={() => onNav("pricing")}>Plans</button>
           <button className={link} onClick={() => onNav("pricing")}>Usage estimator</button>
           <button className={link} onClick={() => onNav("pricing")}>Enterprise</button>
+        </div>
+        <div className={col}>
+          <div className="mb-1 font-plex text-[11px] uppercase tracking-wider text-inkdim">Docs</div>
+          <button className={link} onClick={() => onNav("docs")}>Overview</button>
+          <button className={link} onClick={() => onNav("docs")}>Quickstart</button>
+          <button className={link} onClick={() => onNav("docs")}>Agent dimensions</button>
+          <button className={link} onClick={() => onNav("docs")}>API reference</button>
         </div>
         <div className={col}>
           <div className="mb-1 font-plex text-[11px] uppercase tracking-wider text-inkdim">Channels</div>

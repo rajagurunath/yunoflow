@@ -4,8 +4,7 @@ import { OrchestrationDiagram } from "../components/OrchestrationDiagram";
 import { YunoMark } from "../components/YunoMark";
 
 export function Login({ onSuccess, onBack }: { onSuccess: () => void; onBack: () => void }) {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("orchestra");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -13,7 +12,7 @@ export function Login({ onSuccess, onBack }: { onSuccess: () => void; onBack: ()
     e.preventDefault();
     setBusy(true); setErr(null);
     try {
-      await auth.login(username, password);
+      await auth.login(email.trim());
       onSuccess();
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : String(ex));
@@ -56,32 +55,28 @@ export function Login({ onSuccess, onBack }: { onSuccess: () => void; onBack: ()
             <span className="font-serif text-lg font-semibold text-ink">YunoFlow</span>
           </div>
 
-          <h1 className="font-serif text-3xl font-semibold text-ink">Sign in to the console</h1>
-          <p className="mt-1.5 text-sm text-inkmut">Welcome back. Enter your credentials to continue.</p>
+          <h1 className="font-serif text-3xl font-semibold text-ink">Enter the console</h1>
+          <p className="mt-1.5 text-sm text-inkmut">Drop your email and you're in — no password for the demo.</p>
 
           <div className="mt-7 space-y-4">
             <div>
-              <label className="mb-1.5 block font-plex text-[11px] uppercase tracking-wide text-inkmut">Username</label>
-              <input className={field} value={username} autoComplete="username"
-                onChange={(e) => setUsername(e.target.value)} />
-            </div>
-            <div>
-              <label className="mb-1.5 block font-plex text-[11px] uppercase tracking-wide text-inkmut">Password</label>
-              <input type="password" className={field} value={password} autoComplete="current-password"
-                onChange={(e) => setPassword(e.target.value)} />
+              <label className="mb-1.5 block font-plex text-[11px] uppercase tracking-wide text-inkmut">Email</label>
+              <input type="email" required className={field} value={email} autoComplete="email"
+                placeholder="you@company.com" autoFocus
+                onChange={(e) => setEmail(e.target.value)} />
             </div>
           </div>
 
           {err && <div className="mt-4 rounded-lg border border-coral/40 bg-coral/10 px-3 py-2 text-sm text-coral">{err}</div>}
 
-          <button type="submit" disabled={busy}
+          <button type="submit" disabled={busy || !email.trim()}
             className="mt-6 w-full rounded-lg bg-ink py-2.5 text-sm font-semibold text-paper transition hover:-translate-y-px hover:bg-ink2 disabled:opacity-50">
-            {busy ? "Signing in…" : "Sign in →"}
+            {busy ? "Entering…" : "Enter the console →"}
           </button>
 
           <div className="mt-5 rounded-lg border border-vline bg-sand px-3.5 py-2.5 font-plex text-[11px] text-inkmut">
-            <span className="text-ink">Demo access</span> — username <span className="text-emerald">admin</span> · password <span className="text-emerald">orchestra</span>
-            <div className="mt-1 text-inkdim">(configurable via AUTH_USERNAME / AUTH_PASSWORD in .env)</div>
+            <span className="text-ink">Demo access</span> — just your email gets you into the live console.
+            <div className="mt-1 text-inkdim">No account needed; we only use it to know who's trying YunoFlow.</div>
           </div>
 
           <button type="button" onClick={onBack} className="mt-6 text-sm text-inkmut hover:text-ink">← Back to site</button>

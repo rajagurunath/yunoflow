@@ -1,38 +1,33 @@
 # YunoFlow — AI Agent Orchestration Platform
 
 > Submission for the Yuno AI Engineer Challenge.
-> Create AI agents, configure how they behave, connect them into collaborative
-> workflows on a **real LangGraph runtime**, talk to them over **Telegram**, and
-> watch every step **live**. Runs fully local with one command.
+> Create AI agents, configure them across **14 dimensions**, connect them into
+> collaborative workflows on a **real LangGraph runtime**, pause for **human
+> approval** over **Telegram** or the console, and watch every token and cost
+> stream **live**. Runs fully local with one command — or self-hosted via Docker.
 
-![Workflow builder](docs/screenshots/workflow-builder.png)
+**▶ Live demo:** http://138.199.238.92 — enter any email to open the console
+(no password). · **Docs:** the in-app `/docs` page (linked from the landing nav).
 
 A user draws a workflow on a canvas → it compiles to an executable graph → agents
-run, call real tools, and communicate asynchronously → a human can drive it from
-Telegram → every message, token and cost streams to a live monitor.
+run, call real tools, hand off to each other, and **pause for a human** when a
+workflow includes an approval step → every message, token and cost streams to a
+live monitor.
 
 ---
 
-## Demo
+## What you'll see
 
-![Demo](docs/demo.gif)
+Templates → instantiate **Refund Approval (Human-in-the-loop)** → a triage agent
+summarizes the request → the run **pauses at a human node** (`waiting_human`) →
+approve it inline in the console *or* by replying in Telegram → the run resumes
+from its checkpoint and a refund agent completes it. The live monitor streams
+`run_started → node_enter → agent_message → token_usage → interrupt → run_completed`,
+highlighting the running node in real time.
 
-*The flow above (captured live): Templates → instantiate Payments Support Triage →
-visual workflow → Run → the triage agent classifies and routes to the refund
-branch → live monitor streams tokens/cost/messages → run completes → browse the
-persisted transcript in History.*
-
-| Templates → one click to a multi-agent workflow | Live run (WebSocket monitor) |
-|---|---|
-| ![Templates](docs/screenshots/templates.png) | ![Live run](docs/screenshots/live-run.png) |
-
-> For the scheduled live session, a narrated screen recording also showing the
-> **Telegram** human-in-the-loop resume is the natural companion to this gif.
-
-**End-to-end verified live** (real io.net model): instantiate template → compiled
-graph with a feedback loop → Run → multi-agent execution → completed (1,154 tokens,
-$0.0005) with the live monitor streaming `run_started → agent_message → token_usage
-→ run_completed`. Routing verified on both branches; Telegram bot live.
+**End-to-end verified** against the real io.net model: instantiate → compiled
+graph → run → multi-agent execution with a human pause → resume → completed, with
+per-run token/cost persisted and an impact-metrics summary at `/api/metrics/summary`.
 
 ---
 
@@ -46,7 +41,8 @@ cp backend/.env.example .env        # set LLM_* and (optionally) TELEGRAM_BOT_TO
 make up                             # builds the UI, starts db + backend + frontend
 ```
 
-- **UI:** http://localhost:5173
+- **UI:** http://localhost:5173 — open the console by entering any **email** (demo
+  gate, no password; the email is saved to a `console_users` table).
 - **API:** http://localhost:8000 (`/health`, OpenAPI at `/docs`)
 - `make down` to stop. `make seed` reloads templates. `make test` / `make lint`.
 
@@ -69,7 +65,7 @@ Three layers with explicit boundaries (UI ⟷ runtime ⟷ persistence):
 
 ```mermaid
 flowchart TB
-  subgraph FE["Frontend — React + ReactFlow (Midnight Ledger)"]
+  subgraph FE["Frontend — React + ReactFlow (Vault Light)"]
     Studio["Agent Studio<br/>(CRUD · 14 config dims)"]
     Builder["Workflow Builder<br/>(visual graph)"]
     Monitor["Live Monitor<br/>(WebSocket)"]
@@ -126,6 +122,7 @@ capabilities rather than bespoke code. Full comparison vs AutoGen and CrewAI:
 | Edge | Standard | Status |
 |---|---|---|
 | Agent ↔ Agent | LangGraph shared state + **A2A** Agent Cards | state: built · A2A discovery: built (`/api/a2a/agents`) · A2A task exec: future |
+| Agent ↔ Human (approval) | **`human` node** → `interrupt()`/resume via console **or Telegram** | built |
 | Agent ↔ Human (chat) | **Telegram** (aiogram long-poll) | built |
 | Agent ↔ UI (events) | custom WebSocket (*AG-UI*-shaped) | built |
 | Agent ↔ Tools | internal registry (*MCP*) | built · MCP: future |
@@ -143,9 +140,9 @@ backend/            FastAPI + LangGraph + SQLAlchemy + aiogram
   app/channels/     Channel ABC, telegram, router, manager
   app/scheduling/   APScheduler
   app/observability/ MLflow autolog (flagged)
-  app/templates/    3 seed templates + KB
+  app/templates/    5 seed templates + KB
   app/models/ schemas/ tests/
-frontend/           React + TS + Vite + ReactFlow + Tailwind ("Midnight Ledger")
+frontend/           React + TS + Vite + ReactFlow + Tailwind ("Vault Light")
 tech-docs/          design spec, framework decision, frontend design + mockup
 docker-compose.yml  db + backend + frontend (+ optional mlflow profile)
 ```
@@ -162,15 +159,18 @@ Guardrails are enforced at runtime: `max_steps` → graph recursion limit;
 `max_tokens`/`max_cost_usd` → the executor finalizes a run as `failed` when
 exceeded; `allowed_tools` filters what an agent can call.
 
-## Workflow templates (4)
+## Workflow templates (5)
 
 1. **Payments Support Triage** — triage → condition(refund | info) → refund
-   specialist (AP2 refund tools) / FAQ agent. Conditions + Telegram + HITL.
+   specialist (AP2 refund tools) / FAQ agent. Conditions + Telegram.
 2. **Research → Draft → Review** — researcher → writer → critic, looping back to
    the writer until approved (feedback loop / cycle).
 3. **Payment Authorization (AP2)** — risk-assess → approve / step-up / decline,
    executing via AP2 intent/cart/payment mandates.
-4. **Dispute Investigator (DeepAgent)** — a `deepagents` node that plans, calls
+4. **Refund Approval (Human-in-the-loop)** — triage summarizes the request → a
+   `human` node **pauses for approval** (console or Telegram) → refund agent issues
+   it. The clearest demo of `interrupt()`/resume over a real channel.
+5. **Dispute Investigator (DeepAgent)** — a `deepagents` node that plans, calls
    tools, and spawns sub-agents to investigate a disputed charge and recommend.
 
 ---
@@ -202,18 +202,22 @@ loads it. Instantiating creates the agents and a runnable workflow.
 
 | Method | Path | Purpose |
 |---|---|---|
+| `POST` | `/api/auth/login` | email-only console gate → `{token, user}` |
 | `POST/GET/PATCH/DELETE` | `/api/agents` | agent CRUD |
 | `POST` | `/api/workflows/{id}/validate` | dry-run compile (structural errors) |
 | `POST` | `/api/runs` | start a run (background) |
-| `POST` | `/api/runs/{id}/resume` | resume an interrupted run |
+| `POST` | `/api/runs/{id}/resume` | resume an interrupted run (human approval) |
 | `GET` | `/api/runs/{id}/messages` `…/usage` `…/events` | history, token/cost, monitor events |
 | `WS` | `/api/ws/runs/{id}` | live monitor (replay + stream) |
+| `GET` | `/api/metrics/summary` | impact metrics (dimensions, completion rate, tokens) |
 | `GET` | `/api/templates`, `POST …/instantiate` | templates |
+| `POST/GET/DELETE` | `/api/channels` | connect/list/remove a Telegram bot binding |
 | `GET` | `/api/tools`, `/api/channels/status` | tools, channel status |
 | `GET` | `/api/a2a/agents`, `…/agents/{id}` | A2A Agent Card discovery |
 
 WebSocket event envelope: `{seq, run_id, ts, type, data}` where `type ∈
-{run_started, node_exit, agent_message, token_usage, interrupt, run_completed, error}`.
+{run_started, node_enter, node_exit, agent_message, tool_call, token_usage,
+interrupt, run_completed, error}` (`node_enter` drives the live running-node highlight).
 
 ---
 

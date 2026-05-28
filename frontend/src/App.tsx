@@ -4,6 +4,7 @@ import type { PublicPage } from "./components/PublicChrome";
 import { auth } from "./lib/auth";
 import { AgentStudio } from "./features/AgentStudio";
 import { ChannelsView } from "./features/ChannelsView";
+import { Docs } from "./features/Docs";
 import { Landing } from "./features/Landing";
 import { Login } from "./features/Login";
 import { MessageHistory } from "./features/MessageHistory";
@@ -41,6 +42,9 @@ export function App() {
   }
   if (page === "pricing") {
     return <Pricing onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />;
+  }
+  if (page === "docs") {
+    return <Docs onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />;
   }
   return <Landing onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />;
 }

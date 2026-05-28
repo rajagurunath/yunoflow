@@ -2,6 +2,7 @@
 from app.models.agent import Agent
 from app.models.base import Base
 from app.models.channel_binding import ChannelBinding
+from app.models.console_user import ConsoleUser
 from app.models.message import Message
 from app.models.run_event import RunEvent
 from app.models.template import Template
@@ -16,6 +17,7 @@ __all__ = [
     "WorkflowRun",
     "Message",
     "ChannelBinding",
+    "ConsoleUser",
     "Template",
     "Usage",
     "RunEvent",

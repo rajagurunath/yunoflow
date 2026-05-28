@@ -1,28 +1,35 @@
-"""Console authentication — gates the web console behind credentials.
+"""Console access — demo-grade, email-only.
 
-Demo-grade: a single operator account from settings (AUTH_USERNAME/AUTH_PASSWORD).
-The password is verified server-side and a signed token is returned; the SPA
-stores it and only renders the console when present. The public landing page is
-unauthenticated.
+The user enters an email to enter the console; we record it (one row per unique
+email) and return a signed token the SPA stores. There is no password: this is a
+public demo gate, not real authentication. The landing page stays unauthenticated.
 """
 from __future__ import annotations
 
 import base64
 import hashlib
 import hmac
+import re
 
 from fastapi import APIRouter
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
+from app.core.db import SessionLocal
 from app.core.errors import AppError
+from app.core.logging import get_logger
+from app.models import ConsoleUser
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+log = get_logger(__name__)
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    email: str
 
 
 class LoginResponse(BaseModel):
@@ -35,11 +42,25 @@ def _issue_token(user: str) -> str:
     return base64.urlsafe_b64encode(f"{user}:{sig}".encode()).decode()
 
 
+async def _record_email(email: str) -> None:
+    """Save the email once (ignore if it already signed in before)."""
+    async with SessionLocal() as s:
+        exists = (await s.execute(
+            select(ConsoleUser).where(ConsoleUser.email == email))).scalars().first()
+        if exists:
+            return
+        s.add(ConsoleUser(email=email))
+        try:
+            await s.commit()
+        except IntegrityError:  # raced with a concurrent first sign-in
+            await s.rollback()
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginRequest) -> LoginResponse:
-    ok = hmac.compare_digest(body.username, settings.auth_username) and hmac.compare_digest(
-        body.password, settings.auth_password
-    )
-    if not ok:
-        raise AppError("invalid username or password", code="invalid_credentials", status_code=401)
-    return LoginResponse(token=_issue_token(body.username), user=body.username)
+    email = body.email.strip().lower()
+    if not _EMAIL_RE.match(email):
+        raise AppError("please enter a valid email address", code="invalid_email", status_code=400)
+    await _record_email(email)
+    log.info("console.login", email=email)
+    return LoginResponse(token=_issue_token(email), user=email)

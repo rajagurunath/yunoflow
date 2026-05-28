@@ -13,11 +13,11 @@ export const auth = {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   },
-  async login(username: string, password: string): Promise<{ token: string; user: string }> {
+  async login(email: string): Promise<{ token: string; user: string }> {
     const r = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email }),
     });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
