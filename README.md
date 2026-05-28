@@ -6,8 +6,10 @@
 > approval** over **Telegram** or the console, and watch every token and cost
 > stream **live**. Runs fully local with one command — or self-hosted via Docker.
 
-**▶ Live demo:** http://138.199.238.92 — enter any email to open the console
-(no password). · **Docs:** the in-app `/docs` page (linked from the landing nav).
+**▶ Live demo:** **https://frontend-eta-dun-30.vercel.app** (frontend on Vercel) →
+backend at **https://138.199.238.92.sslip.io** (Docker on a VM, HTTPS via Caddy).
+Enter any email to open the console — no password.
+**API docs (OpenAPI/Swagger):** https://138.199.238.92.sslip.io/docs
 
 A user draws a workflow on a canvas → it compiles to an executable graph → agents
 run, call real tools, hand off to each other, and **pause for a human** when a
