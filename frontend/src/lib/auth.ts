@@ -1,3 +1,5 @@
+import { API_BASE } from "./api";
+
 const TOKEN_KEY = "yunoflow.token";
 const USER_KEY = "yunoflow.user";
 
@@ -14,7 +16,7 @@ export const auth = {
     localStorage.removeItem(USER_KEY);
   },
   async login(email: string): Promise<{ token: string; user: string }> {
-    const r = await fetch("/api/auth/login", {
+    const r = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email }),

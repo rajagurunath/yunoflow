@@ -2,6 +2,14 @@ import type {
   Agent, ChannelBinding, Message, MetricsSummary, Run, Template, ToolSpec, Workflow, WSEvent,
 } from "./types";
 
+// Where the backend lives. Empty = same-origin (the box serves the SPA + proxies
+// /api via nginx). On Vercel, set VITE_API_URL to the backend's HTTPS origin
+// (e.g. https://138-199-238-92.sslip.io) so REST + WebSocket reach the box.
+export const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
+// Swagger / OpenAPI UI (served by the backend, proxied at the same origin).
+export const API_DOCS_URL = `${API_BASE}/docs`;
+
 async function j<T>(r: Response): Promise<T> {
   if (!r.ok) {
     let msg = `${r.status} ${r.statusText}`;
@@ -10,60 +18,63 @@ async function j<T>(r: Response): Promise<T> {
   }
   return (r.status === 204 ? null : await r.json()) as T;
 }
-const post = (url: string, body?: unknown) =>
-  fetch(url, { method: "POST", headers: { "content-type": "application/json" },
+const f = (path: string, init?: RequestInit) => fetch(API_BASE + path, init);
+const post = (path: string, body?: unknown) =>
+  f(path, { method: "POST", headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const api = {
-  listAgents: () => fetch("/api/agents").then(j<Agent[]>),
+  listAgents: () => f("/api/agents").then(j<Agent[]>),
   createAgent: (a: Partial<Agent>) => post("/api/agents", a).then(j<Agent>),
   updateAgent: (id: string, a: Partial<Agent>) =>
-    fetch(`/api/agents/${id}`, {
+    f(`/api/agents/${id}`, {
       method: "PATCH", headers: { "content-type": "application/json" },
       body: JSON.stringify(a),
     }).then(j<Agent>),
-  deleteAgent: (id: string) => fetch(`/api/agents/${id}`, { method: "DELETE" }).then(() => null),
-  tools: () => fetch("/api/tools").then(j<ToolSpec[]>),
+  deleteAgent: (id: string) => f(`/api/agents/${id}`, { method: "DELETE" }).then(() => null),
+  tools: () => f("/api/tools").then(j<ToolSpec[]>),
 
-  listTemplates: () => fetch("/api/templates").then(j<Template[]>),
+  listTemplates: () => f("/api/templates").then(j<Template[]>),
   instantiate: (id: string, name?: string) => post(`/api/templates/${id}/instantiate`, { name }).then(j<Workflow>),
 
-  listWorkflows: () => fetch("/api/workflows").then(j<Workflow[]>),
-  getWorkflow: (id: string) => fetch(`/api/workflows/${id}`).then(j<Workflow>),
+  listWorkflows: () => f("/api/workflows").then(j<Workflow[]>),
+  getWorkflow: (id: string) => f(`/api/workflows/${id}`).then(j<Workflow>),
   createWorkflow: (w: { name: string; description?: string; graph_json: unknown }) =>
     post("/api/workflows", w).then(j<Workflow>),
   generateWorkflow: (prompt: string) => post("/api/workflows/generate", { prompt }).then(j<Workflow>),
   patchWorkflow: (id: string, graph_json: unknown) =>
-    fetch(`/api/workflows/${id}`, {
+    f(`/api/workflows/${id}`, {
       method: "PATCH", headers: { "content-type": "application/json" },
       body: JSON.stringify({ graph_json }),
     }).then(j<Workflow>),
   validateWorkflow: (id: string) => post(`/api/workflows/${id}/validate`).then(j<any>),
   updateWorkflow: (id: string, body: Partial<Workflow>) =>
-    fetch(`/api/workflows/${id}`, {
+    f(`/api/workflows/${id}`, {
       method: "PATCH", headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }).then(j<Workflow>),
-  metrics: () => fetch("/api/metrics/summary").then(j<MetricsSummary>),
+  metrics: () => f("/api/metrics/summary").then(j<MetricsSummary>),
 
   createRun: (workflow_id: string, message: string) =>
     post("/api/runs", { workflow_id, input: { message } }).then(j<Run>),
   resumeRun: (id: string, value: string) => post(`/api/runs/${id}/resume`, { value }).then(j<Run>),
-  getRun: (id: string) => fetch(`/api/runs/${id}`).then(j<Run>),
-  runMessages: (id: string) => fetch(`/api/runs/${id}/messages`).then(j<Message[]>),
-  runEvents: (id: string) => fetch(`/api/runs/${id}/events`).then(j<WSEvent[]>),
-  listRuns: () => fetch("/api/runs").then(j<Run[]>),
+  getRun: (id: string) => f(`/api/runs/${id}`).then(j<Run>),
+  runMessages: (id: string) => f(`/api/runs/${id}/messages`).then(j<Message[]>),
+  runEvents: (id: string) => f(`/api/runs/${id}/events`).then(j<WSEvent[]>),
+  listRuns: () => f("/api/runs").then(j<Run[]>),
 
-  listChannels: () => fetch("/api/channels").then(j<ChannelBinding[]>),
-  channelStatus: () => fetch("/api/channels/status").then(j<Record<string, any>>),
+  listChannels: () => f("/api/channels").then(j<ChannelBinding[]>),
+  channelStatus: () => f("/api/channels/status").then(j<Record<string, any>>),
   createChannel: (b: { channel_type: string; workflow_id: string; bot_token?: string; label?: string; notify_chat_id?: string }) =>
     post("/api/channels", b).then(j<ChannelBinding>),
-  deleteChannel: (id: string) => fetch(`/api/channels/${id}`, { method: "DELETE" }).then(() => null),
+  deleteChannel: (id: string) => f(`/api/channels/${id}`, { method: "DELETE" }).then(() => null),
 };
 
 export function openRunSocket(runId: string, onEvent: (e: WSEvent) => void): WebSocket {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/api/ws/runs/${runId}`);
+  // ws(s) origin: the configured API base if set, else the page origin.
+  const base = API_BASE || location.origin;
+  const wsBase = base.replace(/^http/, "ws"); // http->ws, https->wss
+  const ws = new WebSocket(`${wsBase}/api/ws/runs/${runId}`);
   ws.onmessage = (m) => {
     try { onEvent(JSON.parse(m.data)); } catch { /* ignore */ }
   };

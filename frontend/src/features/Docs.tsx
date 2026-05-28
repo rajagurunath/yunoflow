@@ -18,7 +18,39 @@ const SECTIONS: { id: string; label: string }[] = [
   { id: "guardrails", label: "Guardrails" },
   { id: "api", label: "API reference" },
   { id: "architecture", label: "Architecture" },
+  { id: "decisions", label: "Design decisions" },
   { id: "deploy", label: "Self-host" },
+];
+
+// ADR-style log of the choices that shaped YunoFlow — decision, why, and the tradeoff.
+const DECISIONS: [string, string, string][] = [
+  ["Runtime: LangGraph",
+    "The core requirement — a visual builder with conditions and feedback loops on a real runtime — is a directed graph with cycles, which maps 1:1 onto LangGraph's StateGraph. We inherited persistence, message replay, token streaming, and interrupt()/resume instead of building them.",
+    "A heavier dependency than a hand-rolled loop, and LangGraph's API surface moves quickly."],
+  ["The canvas is the graph",
+    "The ReactFlow document is the workflow definition. A Compiler turns graph_json into a StateGraph one node/edge at a time, so there is no second source of truth between what you draw and what runs.",
+    "The Compiler must validate aggressively (orphan nodes, bad branch labels) since users can draw invalid graphs."],
+  ["Inference: io.net hosted endpoint",
+    "Agents call an OpenAI-compatible endpoint via LLM_BASE_URL, so the model is a swappable config value (io.net, OpenAI, OpenRouter, or local vLLM). Frontier models run without GPUs to manage.",
+    "A network dependency and per-token cost; self-hosting a 1T-class model isn't viable on commodity hardware."],
+  ["Human-in-the-loop via interrupt()/resume",
+    "A human node checkpoints the run and pauses. The prompt is surfaced in the console and pushed to Telegram; replying from either resumes the exact run from its checkpoint. Approvals work for chat-, console-, and schedule-started runs.",
+    "Resume must reliably find the right paused run — solved by tagging the run with the chat id and scoping by workflow."],
+  ["Persistence: Postgres + async checkpointer",
+    "Runs, messages, usage and graph state persist, so a run survives a restart and can resume mid-flight. The same Postgres backs the app and the LangGraph checkpointer.",
+    "Requires a real database even for the demo (no in-memory shortcut in production)."],
+  ["Scheduling: APScheduler, DB as source of truth",
+    "Cron schedules live on the agent/workflow rows; the scheduler re-registers every schedule from the DB on startup, so jobs survive restarts.",
+    "The live timer is in-memory, so a missed tick while the process is down isn't replayed (no catch-up)."],
+  ["Differentiators behind feature flags",
+    "A2A discovery, DeepAgents, DBOS durable execution and MLflow tracing are built but gated (FEATURE_* + optional extras), so the MVP stays lean and runnable while the advanced paths can be switched on per environment.",
+    "Gated code is exercised less often; each flag is a path that needs its own verification."],
+  ["Demo auth: email-only",
+    "The console gate collects an email and issues a signed token — enough to know who's trying the demo without a sign-up flow.",
+    "Not real authentication: the API itself isn't user-protected, so a public deploy should add real auth or rate-limiting."],
+  ["Deploy: split — Vercel frontend + box backend",
+    "Vercel can't host long-poll Telegram, an always-on scheduler, or WebSocket streaming (serverless functions are short-lived). So the static frontend goes on Vercel's edge and the stateful backend runs as containers on a VM, fronted by HTTPS.",
+    "Two surfaces to operate, and the backend needs TLS (Caddy + a domain) for the browser to reach it from an HTTPS origin."],
 ];
 
 function Code({ children }: { children: string }) {
@@ -264,6 +296,28 @@ WS   /api/ws/runs/{id}                                live run events`}</Code>
               <li><span className="text-ink">Scheduling</span> — APScheduler, re-hydrated from the DB at startup.</li>
               <li><span className="text-ink">Frontend</span> — React + Vite + Tailwind + ReactFlow.</li>
             </ul>
+          </section>
+
+          <section>
+            <H id="decisions" kicker="Why it's built this way">Design decisions</H>
+            <p className={body}>
+              The engineering choices behind YunoFlow — each with the reasoning and the tradeoff
+              it accepts. (An ADR-style log; the long-form comparison vs AutoGen/CrewAI lives in
+              <K> tech-docs/framework.md</K>.)
+            </p>
+            <div className="mt-5 space-y-3">
+              {DECISIONS.map(([decision, why, tradeoff]) => (
+                <div key={decision} className="rounded-xl border border-vline bg-paper p-5">
+                  <div className="font-serif text-[16px] text-ink">{decision}</div>
+                  <p className="mt-2 text-[14px] leading-relaxed text-inkmut">
+                    <span className="font-plex text-[11px] uppercase tracking-wide text-emerald">Why · </span>{why}
+                  </p>
+                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-inkdim">
+                    <span className="font-plex text-[11px] uppercase tracking-wide text-goldv">Tradeoff · </span>{tradeoff}
+                  </p>
+                </div>
+              ))}
+            </div>
           </section>
 
           <section>

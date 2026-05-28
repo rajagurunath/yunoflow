@@ -1,3 +1,4 @@
+import { API_DOCS_URL } from "../lib/api";
 import { YunoMark } from "./YunoMark";
 
 export type PublicPage = "landing" | "pricing" | "docs";
@@ -22,6 +23,7 @@ export function PublicNav({ onNav, onSignIn, current }: {
           <a href="#lifecycle" onClick={() => onNav("landing")} className={link}>Lifecycle</a>
           <a href="#usecases" onClick={() => onNav("landing")} className={link}>Use cases</a>
           <button onClick={() => onNav("docs")} className={`${link} ${current === "docs" ? "text-ink" : ""}`}>Docs</button>
+          <a href={API_DOCS_URL} target="_blank" rel="noreferrer" className={`${link} inline-flex items-center gap-1`}>API <span className="text-[10px] text-inkdim">↗</span></a>
           <button onClick={() => onNav("pricing")} className={`${link} ${current === "pricing" ? "text-ink" : ""}`}>Pricing</button>
         </nav>
         <div className="ml-auto flex items-center gap-4 md:ml-0">
@@ -69,7 +71,7 @@ export function PublicFooter({ onNav, onSignIn }: { onNav: (p: PublicPage) => vo
           <button className={link} onClick={() => onNav("docs")}>Overview</button>
           <button className={link} onClick={() => onNav("docs")}>Quickstart</button>
           <button className={link} onClick={() => onNav("docs")}>Agent dimensions</button>
-          <button className={link} onClick={() => onNav("docs")}>API reference</button>
+          <a className={link} href={API_DOCS_URL} target="_blank" rel="noreferrer">API reference (OpenAPI) ↗</a>
         </div>
         <div className={col}>
           <div className="mb-1 font-plex text-[11px] uppercase tracking-wider text-inkdim">Channels</div>

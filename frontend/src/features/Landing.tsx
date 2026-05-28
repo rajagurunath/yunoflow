@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { OrchestrationDiagram } from "../components/OrchestrationDiagram";
 import { HeroShowcase } from "../components/HeroShowcase";
 import { PublicFooter, PublicNav, type PublicPage } from "../components/PublicChrome";
+import { API_DOCS_URL } from "../lib/api";
 
 const CLIENTS = ["inDrive", "McDonald's", "Rappi", "Viva Aerobús", "Avianca"];
 
@@ -105,9 +106,13 @@ export function Landing({ onNav, onSignIn }: { onNav: (p: PublicPage) => void; o
               <a href="#how" className="rounded-lg border border-vline2 px-5 py-3 text-sm font-medium text-ink transition hover:bg-sand">
                 See how it works
               </a>
+              <a href={API_DOCS_URL} target="_blank" rel="noreferrer"
+                className="rounded-lg border border-vline2 px-5 py-3 text-sm font-medium text-ink transition hover:bg-sand">
+                API docs ↗
+              </a>
             </div>
             <div className="fade-up mt-6 font-plex text-[11px] text-inkdim" style={{ animationDelay: ".34s" }}>
-              Runs fully local · one command · demo login admin / orchestra
+              Open the console with just your email · live runtime · interactive API at <span className="text-emerald">/docs</span>
             </div>
           </div>
 
