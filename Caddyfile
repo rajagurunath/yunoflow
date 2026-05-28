@@ -1,0 +1,6 @@
+# Automatic HTTPS for the box via a free sslip.io domain (resolves to the IP).
+# Caddy obtains + renews a Let's Encrypt cert and reverse-proxies everything
+# (SPA, /api REST + WebSocket, /docs) to the nginx frontend over the compose net.
+138.199.238.92.sslip.io {
+    reverse_proxy frontend:80
+}
