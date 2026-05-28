@@ -1,0 +1,49 @@
+# Production/VM deploy: frontend on :80, API on :8000, Postgres bound to
+# localhost only (never internet-exposed). nginx in the frontend proxies
+# /api (REST + WebSocket) to the backend over the compose network.
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Requires a .env at the repo root (LLM_* and, optionally, TELEGRAM_BOT_TOKEN).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: yuno
+      POSTGRES_PASSWORD: yuno
+      POSTGRES_DB: yuno
+    ports:
+      - "127.0.0.1:5433:5432"   # localhost-only; not reachable from the internet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yuno -d yuno"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://yuno:yuno@db:5432/yuno
+      CHECKPOINT_DB_URI: postgresql://yuno:yuno@db:5432/yuno
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"   # OpenAPI at /docs (handy for the demo)
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
