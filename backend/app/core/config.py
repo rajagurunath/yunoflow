@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     # the in-compose backend overrides these via env to reach db:5432 on the compose network)
     database_url: str = "postgresql+asyncpg://yuno:yuno@localhost:5433/yuno"
     checkpoint_db_uri: str = "postgresql://yuno:yuno@localhost:5433/yuno"
+    # 0 = NullPool (fresh connection per request — fine for local/tests). >0 keeps a
+    # warm connection pool, essential for a *remote* DB (e.g. Supabase) where a new
+    # TLS handshake per request makes every call slow. Set DB_POOL_SIZE=10 in prod.
+    db_pool_size: int = 0
 
     # LLM (OpenAI-compatible)
     llm_base_url: str = "https://api.openai.com/v1"
