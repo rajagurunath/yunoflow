@@ -7,9 +7,10 @@
 > stream **live**. Runs fully local with one command — or self-hosted via Docker.
 
 **▶ Live demo:** **https://frontend-eta-dun-30.vercel.app** (frontend on Vercel) →
-backend at **https://138.199.238.92.sslip.io** (Docker on a VM, HTTPS via Caddy).
-Enter any email to open the console — no password.
-**API docs (OpenAPI/Swagger):** https://138.199.238.92.sslip.io/docs
+backend at **https://138.199.238.92.sslip.io** (Docker on a VM, HTTPS via Caddy,
+data on **Supabase** Postgres). Enter any email to open the console — no password.
+**API docs (OpenAPI/Swagger):** https://138.199.238.92.sslip.io/docs ·
+**Roadmap & Design decisions:** in the landing nav.
 
 A user draws a workflow on a canvas → it compiles to an executable graph → agents
 run, call real tools, hand off to each other, and **pause for a human** when a
