@@ -61,6 +61,80 @@ const THEME_COLOR: Record<Theme, string> = {
   Observability: "#7c5cbf", Trust: "#c2554d", Quality: "#2c8a6d", Core: "#5a5f66",
 };
 
+// A workflow-style DAG: existing state (Today) → milestone stages → North Star
+// (desired state), with animated flow along the spine. Pure SVG so it scales.
+function RoadmapGraph() {
+  const spineY = 120;
+  const chipW = 170, chipH = 22, chipY0 = 172, chipStep = 28, nodeW = 134, nodeH = 44;
+  const stages = [
+    { x: 122, label: "Today", sub: "Existing state", color: "#0d6e54",
+      chips: ["Builder → real runtime", "Human-in-the-loop", "Live observability", "Cron scheduling"] },
+    { x: 342, label: "Next", sub: "Building", color: "#1486a8",
+      chips: ["A2A task execution", "Sandboxed execution", "Memory & skills"] },
+    { x: 562, label: "Later", sub: "Planned", color: "#b78a2e",
+      chips: ["Eval & replay", "Durable (DBOS)", "Real auth + limits"] },
+    { x: 782, label: "Exploring", sub: "Research", color: "#7c5cbf",
+      chips: ["Fine-tuning loop", "Multi-tenant", "Marketplace"] },
+  ];
+  const north = { x: 968, chips: ["Agents that self-improve", "Open interop · A2A + MCP", "Safe · multi-tenant · durable"] };
+
+  return (
+    <div className="overflow-x-auto">
+      <svg viewBox="0 0 1080 300" className="w-full min-w-[840px]" role="img"
+        aria-label="Roadmap graph from today's existing state to the desired north-star state">
+        <defs>
+          <linearGradient id="rm-spine" x1="0" x2="1">
+            <stop offset="0" stopColor="#0d6e54" /><stop offset=".42" stopColor="#1486a8" />
+            <stop offset=".74" stopColor="#7c5cbf" /><stop offset="1" stopColor="#12876a" />
+          </linearGradient>
+          <linearGradient id="rm-north" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#17a37a" /><stop offset="1" stopColor="#0b6147" />
+          </linearGradient>
+          <path id="rm-path" d={`M${stages[0].x},${spineY} L${north.x},${spineY}`} fill="none" />
+        </defs>
+
+        <line x1={stages[0].x} y1={spineY} x2={north.x} y2={spineY} stroke="url(#rm-spine)" strokeWidth="3" opacity="0.55" />
+        {[0, 1.35, 2.7].map((b, i) => (
+          <circle key={i} r="3.6" fill="#12876a">
+            <animateMotion dur="4.2s" begin={`${b}s`} repeatCount="indefinite"><mpath href="#rm-path" /></animateMotion>
+          </circle>
+        ))}
+
+        <text x={stages[0].x} y={spineY - 46} textAnchor="middle" className="font-plex" fontSize="9.5" letterSpacing="2" fill="#9aa0a6">EXISTING STATE</text>
+        <text x={north.x} y={spineY - 50} textAnchor="middle" className="font-plex" fontSize="9.5" letterSpacing="2" fill="#0d6e54">DESIRED STATE</text>
+
+        {stages.map((s) => (
+          <g key={s.label}>
+            <line x1={s.x} y1={spineY + nodeH / 2} x2={s.x} y2={chipY0 - 6} stroke={s.color} strokeWidth="1" opacity="0.3" />
+            <rect x={s.x - nodeW / 2} y={spineY - nodeH / 2} width={nodeW} height={nodeH} rx="10" fill="#ffffff" stroke={s.color} strokeWidth="1.5" />
+            <circle cx={s.x - nodeW / 2 + 15} cy={spineY} r="4" fill={s.color} />
+            <text x={s.x - nodeW / 2 + 27} y={spineY - 2} className="font-serif" fontSize="14" fill="#14181c">{s.label}</text>
+            <text x={s.x - nodeW / 2 + 27} y={spineY + 12} className="font-plex" fontSize="8" letterSpacing="0.5" fill="#9aa0a6">{s.sub.toUpperCase()}</text>
+            {s.chips.map((c, ci) => (
+              <g key={c}>
+                <rect x={s.x - chipW / 2} y={chipY0 + ci * chipStep} width={chipW} height={chipH} rx="6" fill={`${s.color}12`} stroke={`${s.color}33`} strokeWidth="1" />
+                <text x={s.x} y={chipY0 + ci * chipStep + 15} textAnchor="middle" className="font-plex" fontSize="10.5" fill="#3a3f45">{c}</text>
+              </g>
+            ))}
+          </g>
+        ))}
+
+        <g>
+          <rect x={north.x - 68} y={spineY - 33} width={136} height={66} rx="14" fill="url(#rm-north)" />
+          <text x={north.x} y={spineY - 5} textAnchor="middle" className="font-serif" fontSize="15" fill="#ffffff">★ North Star</text>
+          <text x={north.x} y={spineY + 13} textAnchor="middle" className="font-plex" fontSize="8" letterSpacing="0.5" fill="#cdeee2">SELF-IMPROVING AGENTS</text>
+          {north.chips.map((c, ci) => (
+            <g key={c}>
+              <rect x={north.x - chipW / 2} y={chipY0 + ci * chipStep} width={chipW} height={chipH} rx="6" fill="#12876a14" stroke="#12876a40" strokeWidth="1" />
+              <text x={north.x} y={chipY0 + ci * chipStep + 15} textAnchor="middle" className="font-plex" fontSize="10.5" fill="#0d6e54">{c}</text>
+            </g>
+          ))}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 export function Roadmap({ onNav, onSignIn }: { onNav: (p: PublicPage) => void; onSignIn: () => void }) {
   const [active, setActive] = useState<Theme | "All">("All");
   const shown = (it: Item) => active === "All" || it.theme === active;
@@ -96,6 +170,20 @@ export function Roadmap({ onNav, onSignIn }: { onNav: (p: PublicPage) => void; o
               {t}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* Evolution-path graph: existing state → desired state */}
+      <section className="mx-auto max-w-6xl px-6 pb-6">
+        <div className="rounded-2xl border border-vline bg-paper p-5 md:p-7">
+          <div className="flex items-baseline justify-between gap-3">
+            <div>
+              <div className="font-plex text-[11px] uppercase tracking-[0.2em] text-emerald">Evolution path</div>
+              <h2 className="mt-1 font-serif text-xl font-semibold text-ink">From today's runtime to a self-improving platform.</h2>
+            </div>
+            <span className="hidden font-plex text-[10px] text-inkdim sm:block">data flows left → right</span>
+          </div>
+          <div className="mt-5"><RoadmapGraph /></div>
         </div>
       </section>
 
