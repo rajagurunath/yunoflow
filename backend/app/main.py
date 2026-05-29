@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from contextlib import AsyncExitStack, asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
@@ -129,26 +129,34 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="YunoFlow", version="0.1.0", lifespan=lifespan)
 
+    from app.core.config import settings
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[o.strip() for o in settings.cors_allow_origins.split(",") if o.strip()],
+        allow_origin_regex=settings.cors_allow_origin_regex,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
     install_error_handlers(app)
 
-    app.include_router(health.router)       # /health, /readyz
-    app.include_router(auth.router)         # /api/auth/login
-    app.include_router(agents.router)       # /api/agents
-    app.include_router(tools.router)        # /api/tools
-    app.include_router(workflows.router)    # /api/workflows
-    app.include_router(templates.router)    # /api/templates
-    app.include_router(channels.router)     # /api/channels
-    app.include_router(metrics.router)      # /api/metrics
-    app.include_router(a2a.router)          # /api/a2a (agent card discovery)
-    app.include_router(runs.router)         # /api/runs
-    app.include_router(ws.router)           # /api/ws/runs/{id}
+    # Protected data routers require the email-login bearer token. Open: health,
+    # /api/auth/login (issues the token), /docs, and the WebSocket (browsers can't
+    # set headers on a WS — it only streams run events keyed by an opaque run id).
+    from app.api.deps import require_auth
+    guarded = [Depends(require_auth)]
+
+    app.include_router(health.router)                       # /health, /readyz
+    app.include_router(auth.router)                         # /api/auth/login (open)
+    app.include_router(agents.router, dependencies=guarded)
+    app.include_router(tools.router, dependencies=guarded)
+    app.include_router(workflows.router, dependencies=guarded)
+    app.include_router(templates.router, dependencies=guarded)
+    app.include_router(channels.router, dependencies=guarded)
+    app.include_router(metrics.router, dependencies=guarded)
+    app.include_router(a2a.router, dependencies=guarded)    # /api/a2a
+    app.include_router(runs.router, dependencies=guarded)   # /api/runs
+    app.include_router(ws.router)                           # /api/ws/runs/{id} (open)
 
     return app
 

@@ -42,6 +42,19 @@ def _issue_token(user: str) -> str:
     return base64.urlsafe_b64encode(f"{user}:{sig}".encode()).decode()
 
 
+def verify_token(token: str | None) -> str | None:
+    """Return the email a token was issued to if its HMAC signature is valid, else None."""
+    if not token:
+        return None
+    try:
+        raw = base64.urlsafe_b64decode(token.encode()).decode()
+        user, sig = raw.rsplit(":", 1)
+    except Exception:  # noqa: BLE001
+        return None
+    expected = hmac.new(settings.auth_password.encode(), user.encode(), hashlib.sha256).hexdigest()[:24]
+    return user if hmac.compare_digest(sig, expected) else None
+
+
 async def _record_email(email: str) -> None:
     """Save the email once (ignore if it already signed in before)."""
     async with SessionLocal() as s:

@@ -24,6 +24,12 @@ def _patch_llm(monkeypatch):
     monkeypatch.setattr(llm, "build_chat_model", fake_build_chat_model)
 
 
+@pytest.fixture(autouse=True)
+def _disable_auth(monkeypatch):
+    # API tests call endpoints without a bearer token; the gate is verified separately.
+    monkeypatch.setattr(settings, "auth_enabled", False)
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _clean_db():
     async with SessionLocal() as s:

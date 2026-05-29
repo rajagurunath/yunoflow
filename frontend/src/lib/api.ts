@@ -18,7 +18,15 @@ async function j<T>(r: Response): Promise<T> {
   }
   return (r.status === 204 ? null : await r.json()) as T;
 }
-const f = (path: string, init?: RequestInit) => fetch(API_BASE + path, init);
+// The email-login token (stored by lib/auth) is sent as a Bearer token on every
+// API call — the backend requires it on all /api routes. Read from localStorage
+// directly to avoid a circular import with lib/auth.
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const t = typeof localStorage !== "undefined" ? localStorage.getItem("yunoflow.token") : null;
+  return { ...(extra || {}), ...(t ? { Authorization: `Bearer ${t}` } : {}) };
+}
+const f = (path: string, init: RequestInit = {}) =>
+  fetch(API_BASE + path, { ...init, headers: authHeaders(init.headers) });
 const post = (path: string, body?: unknown) =>
   f(path, { method: "POST", headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body) });

@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     # Console auth (gates the web console; landing page stays public)
     auth_username: str = "admin"
     auth_password: str = "orchestra"
+    # Require the email-login bearer token on /api routes (disable in tests).
+    auth_enabled: bool = True
+    # CORS: explicit allowed origins (comma-separated) + a regex for preview hosts.
+    cors_allow_origins: str = "http://localhost:5173,http://localhost"
+    cors_allow_origin_regex: str = r"https://([a-z0-9-]+\.)*vercel\.app"
 
     # Channels
     telegram_bot_token: str = ""

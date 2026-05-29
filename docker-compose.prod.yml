@@ -1,36 +1,48 @@
-# Production/VM deploy. The frontend (nginx) is fronted by Caddy for automatic
-# HTTPS; nginx proxies /api (REST + WebSocket) + /docs to the backend over the
-# compose network. The database is **Supabase** (managed Postgres) — there is no
-# local db container here; the box .env supplies the connection strings:
-#
-#   DATABASE_URL=postgresql+asyncpg://postgres:<pwd>@db.<ref>.supabase.co:5432/postgres
-#   CHECKPOINT_DB_URI=postgresql://postgres:<pwd>@db.<ref>.supabase.co:5432/postgres?sslmode=require
-#
-# Supabase's direct host is IPv6-only, so the compose network enables IPv6 (the
-# daemon must have ipv6 + ip6tables; see /etc/docker/daemon.json on the box).
+# Production/VM deploy — BACKEND ONLY (the frontend lives on Vercel).
+#   * Public surface: ONLY Caddy on 80/443 (TLS), reverse-proxying the API.
+#   * Auth is enforced in the API layer (email-login bearer token on every /api
+#     route) — NOT a proxy gate — so the public Vercel frontend can call it after login.
+#   * Postgres + backend bound to 127.0.0.1 — never reachable from the internet.
+#   * Local Postgres container (no external DB).
 #
 #   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Requires a .env at the repo root (LLM_* + TELEGRAM_BOT_TOKEN + AUTH_*).
 services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: yuno
+      POSTGRES_PASSWORD: yuno
+      POSTGRES_DB: yuno
+    ports:
+      - "127.0.0.1:5433:5432"   # localhost-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yuno -d yuno"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
   backend:
     build: ./backend
     env_file:
-      - .env          # DATABASE_URL + CHECKPOINT_DB_URI (Supabase) + LLM_* + TELEGRAM_BOT_TOKEN + AUTH_*
+      - .env          # LLM_* + TELEGRAM_BOT_TOKEN + AUTH_*
     environment:
-      DB_POOL_SIZE: "10"   # warm connection pool — essential for the remote Supabase DB
-    ports:
-      - "127.0.0.1:8000:8000"   # localhost-only; reached publicly via Caddy /api + /docs
-    restart: unless-stopped
-
-  frontend:
-    build: ./frontend
-    expose:
-      - "80"          # served to Caddy over the compose network (no public port)
+      DATABASE_URL: postgresql+asyncpg://yuno:yuno@db:5432/yuno
+      CHECKPOINT_DB_URI: postgresql://yuno:yuno@db:5432/yuno
+      AUTH_ENABLED: "true"       # require the email-login bearer token on /api
     depends_on:
-      - backend
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"   # localhost-only; reached publicly via Caddy
     restart: unless-stopped
 
-  # TLS terminator: automatic HTTPS (Let's Encrypt) for the sslip.io domain,
-  # reverse-proxying everything (static + /api + WebSocket + /docs) to nginx.
+  # TLS terminator. The ONLY service with public ports. Reverse-proxies the API
+  # (REST + WebSocket + /docs). Auth is enforced inside the API, not here.
   caddy:
     image: caddy:2-alpine
     ports:
@@ -41,13 +53,10 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - frontend
+      - backend
     restart: unless-stopped
 
-networks:
-  default:
-    enable_ipv6: true   # required to reach Supabase's IPv6-only direct host
-
 volumes:
+  pgdata:
   caddy_data:
   caddy_config:
