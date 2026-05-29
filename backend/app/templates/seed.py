@@ -82,6 +82,42 @@ def _research_draft_review() -> dict:
     }
 
 
+def _lead_qualification() -> dict:
+    # Deliberately non-payments: shows the runtime is general-purpose (sales/ops),
+    # not a payments-only tool. Intake → LLM score → route to outreach/nurture/archive.
+    return {
+        "nodes": [
+            {"id": "start", "type": "start"},
+            _agent("intake", "Lead Intake", "summarizes an inbound lead",
+                   "You read an inbound lead message and summarize who they are, what they want, "
+                   "company size, and any intent signals as a few crisp bullet points.",
+                   tools=["read_kb"]),
+            {"id": "score", "type": "condition",
+             "data": {"mode": "llm", "prompt": "Score this lead's fit and intent: reply hot, warm, or cold.",
+                      "branches": [{"label": "hot"}, {"label": "warm"}, {"label": "cold"}], "default": "warm"}},
+            _agent("sdr", "SDR", "drafts personalized outreach",
+                   "You draft a concise, personalized outreach email for a high-intent lead, referencing "
+                   "their stated need and proposing a specific next step (a short call)."),
+            _agent("nurture", "Nurture", "plans a light-touch follow-up",
+                   "You write a low-pressure nurture follow-up for a mid-intent lead and suggest two "
+                   "relevant resources — no hard sell."),
+            _agent("archive", "Archive", "logs and closes the lead",
+                   "You write a one-line CRM note explaining why this lead is low-fit and can be archived."),
+            {"id": "end", "type": "end"},
+        ],
+        "edges": [
+            {"id": "e1", "source": "start", "target": "intake"},
+            {"id": "e2", "source": "intake", "target": "score"},
+            {"id": "e3", "source": "score", "target": "sdr", "data": {"when": "hot"}},
+            {"id": "e4", "source": "score", "target": "nurture", "data": {"when": "warm"}},
+            {"id": "e5", "source": "score", "target": "archive", "data": {"when": "cold"}},
+            {"id": "e6", "source": "sdr", "target": "end"},
+            {"id": "e7", "source": "nurture", "target": "end"},
+            {"id": "e8", "source": "archive", "target": "end"},
+        ],
+    }
+
+
 def _payment_authorization() -> dict:
     return {
         "nodes": [
@@ -168,6 +204,10 @@ TEMPLATES = [
     ("Research → Draft → Review",
      "Researcher drafts, a critic loops back until the draft is approved (feedback loop).",
      _research_draft_review()),
+    ("Lead Qualification & Routing",
+     "Non-payments showcase: enrich an inbound lead, score intent (hot/warm/cold), and route "
+     "to outreach, nurture, or archive — the same runtime, a different domain.",
+     _lead_qualification()),
     ("Payment Authorization (AP2)",
      "Risk-assess a payment then approve / step-up / decline using AP2-style mandates.",
      _payment_authorization()),
