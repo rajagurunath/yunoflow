@@ -1,7 +1,7 @@
 import { API_DOCS_URL } from "../lib/api";
 import { YunoMark } from "./YunoMark";
 
-export type PublicPage = "landing" | "pricing" | "docs";
+export type PublicPage = "landing" | "pricing" | "docs" | "roadmap";
 
 function Mark() {
   return <YunoMark className="h-8 w-8" />;
@@ -23,6 +23,7 @@ export function PublicNav({ onNav, onSignIn, current }: {
           <a href="#lifecycle" onClick={() => onNav("landing")} className={link}>Lifecycle</a>
           <a href="#usecases" onClick={() => onNav("landing")} className={link}>Use cases</a>
           <button onClick={() => onNav("docs")} className={`${link} ${current === "docs" ? "text-ink" : ""}`}>Docs</button>
+          <button onClick={() => onNav("roadmap")} className={`${link} ${current === "roadmap" ? "text-ink" : ""}`}>Roadmap</button>
           <a href={API_DOCS_URL} target="_blank" rel="noreferrer" className={`${link} inline-flex items-center gap-1`}>API <span className="text-[10px] text-inkdim">↗</span></a>
           <button onClick={() => onNav("pricing")} className={`${link} ${current === "pricing" ? "text-ink" : ""}`}>Pricing</button>
         </nav>
@@ -57,7 +58,7 @@ export function PublicFooter({ onNav, onSignIn }: { onNav: (p: PublicPage) => vo
           <div className="mb-1 font-plex text-[11px] uppercase tracking-wider text-inkdim">Platform</div>
           <button className={link} onClick={() => onNav("landing")}>How it works</button>
           <button className={link} onClick={() => onNav("landing")}>Lifecycle</button>
-          <button className={link} onClick={() => onNav("landing")}>Use cases</button>
+          <button className={link} onClick={() => onNav("roadmap")}>Roadmap</button>
           <button className={link} onClick={onSignIn}>Console</button>
         </div>
         <div className={col}>

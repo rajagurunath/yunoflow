@@ -7,6 +7,7 @@ import { ChannelsView } from "./features/ChannelsView";
 import { Docs } from "./features/Docs";
 import { Landing } from "./features/Landing";
 import { Login } from "./features/Login";
+import { Roadmap } from "./features/Roadmap";
 import { MessageHistory } from "./features/MessageHistory";
 import { Pricing } from "./features/Pricing";
 import { TemplateGallery } from "./features/TemplateGallery";
@@ -45,6 +46,9 @@ export function App() {
   }
   if (page === "docs") {
     return <Docs onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />;
+  }
+  if (page === "roadmap") {
+    return <Roadmap onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />;
   }
   return <Landing onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />;
 }
