@@ -6,7 +6,7 @@
 > approval** over **Telegram** or the console, and watch every token and cost
 > stream **live**. Runs fully local with one command — or self-hosted via Docker.
 
-**▶ Live demo:** **https://frontend-eta-dun-30.vercel.app** (frontend on Vercel) →
+**▶ Live demo:** **https://yunoflow.vercel.app** (frontend on Vercel) →
 backend at **https://138.199.238.92.sslip.io** (Docker on a VM, HTTPS via Caddy,
 data on **Supabase** Postgres). Enter any email to open the console — no password.
 **API docs (OpenAPI/Swagger):** https://138.199.238.92.sslip.io/docs ·
