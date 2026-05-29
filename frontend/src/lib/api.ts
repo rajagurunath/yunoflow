@@ -53,6 +53,7 @@ export const api = {
       method: "PATCH", headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }).then(j<Workflow>),
+  deleteWorkflow: (id: string) => f(`/api/workflows/${id}`, { method: "DELETE" }).then(() => null),
   metrics: () => f("/api/metrics/summary").then(j<MetricsSummary>),
 
   createRun: (workflow_id: string, message: string) =>

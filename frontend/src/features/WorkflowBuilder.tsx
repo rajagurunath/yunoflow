@@ -199,6 +199,17 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
 
   useEffect(() => { api.listWorkflows().then(setWorkflows).catch(() => {}); }, [run]);
 
+  const deleteWorkflow = async (id: string, name: string) => {
+    if (!window.confirm(`Delete workflow "${name}"? This permanently removes it and its runs.`)) return;
+    try {
+      await api.deleteWorkflow(id);
+      setWorkflows((ws) => ws.filter((w) => w.id !== id));
+      if (wf?.id === id) { setWf(null); }   // if the open one was deleted, drop back to the list
+    } catch (e) {
+      alert(`Delete failed: ${e instanceof Error ? e.message : e}`);
+    }
+  };
+
   useEffect(() => {
     if (!workflowId) return;
     (async () => {
@@ -303,8 +314,12 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
 
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {workflows.map((w) => (
-            <Panel key={w.id} className="cursor-pointer p-4 hover:border-line2" >
-              <div className="font-disp text-base">{w.name}</div>
+            <Panel key={w.id} className="p-4 hover:border-line2" >
+              <div className="flex items-start justify-between gap-2">
+                <div className="font-disp text-base">{w.name}</div>
+                <button title="Delete workflow" onClick={() => deleteWorkflow(w.id, w.name)}
+                  className="shrink-0 text-t3 transition hover:text-coral">🗑</button>
+              </div>
               <div className="mt-1 font-mono text-[11px] text-t2">{(w.graph_json?.nodes?.length ?? 0)} nodes · {(w.graph_json?.edges?.length ?? 0)} edges</div>
               <div className="mt-3"><Button onClick={() => onOpen(w.id)}>Open →</Button></div>
             </Panel>
@@ -325,6 +340,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
           <Button variant="primary" onClick={start} disabled={hud.status === "running"}>▶ Run</Button>
           <Button onClick={save}>Save</Button>
           <Button onClick={validate}>Validate</Button>
+          <Button onClick={() => deleteWorkflow(wf.id, wf.name)}>🗑 Delete</Button>
           {wf.schedule_cron && <Pill tone="mint">⏱ {wf.schedule_cron}</Pill>}
           {hud.status && <Pill tone={statusTone(hud.status)}>● {hud.status}</Pill>}
           {editStatus && <span className="font-mono text-[11px] text-t2">{editStatus}</span>}
