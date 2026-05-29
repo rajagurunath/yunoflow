@@ -143,7 +143,7 @@ backend/            FastAPI + LangGraph + SQLAlchemy + aiogram
   app/channels/     Channel ABC, telegram, router, manager
   app/scheduling/   APScheduler
   app/observability/ MLflow autolog (flagged)
-  app/templates/    5 seed templates + KB
+  app/templates/    6 seed templates + KB
   app/models/ schemas/ tests/
 frontend/           React + TS + Vite + ReactFlow + Tailwind ("Vault Light")
 tech-docs/          design spec, framework decision, frontend design + mockup
@@ -162,12 +162,15 @@ Guardrails are enforced at runtime: `max_steps` → graph recursion limit;
 `max_tokens`/`max_cost_usd` → the executor finalizes a run as `failed` when
 exceeded; `allowed_tools` filters what an agent can call.
 
-## Workflow templates (5)
+## Workflow templates (6)
+
+> The platform is **general-purpose** — payments theming reflects Yuno's domain, not a
+> requirement. Templates #2 and #6 are deliberately non-payments to show that.
 
 1. **Payments Support Triage** — triage → condition(refund | info) → refund
    specialist (AP2 refund tools) / FAQ agent. Conditions + Telegram.
-2. **Research → Draft → Review** — researcher → writer → critic, looping back to
-   the writer until approved (feedback loop / cycle).
+2. **Research → Draft → Review** *(non-payments)* — researcher → writer → critic,
+   looping back to the writer until approved (feedback loop / cycle).
 3. **Payment Authorization (AP2)** — risk-assess → approve / step-up / decline,
    executing via AP2 intent/cart/payment mandates.
 4. **Refund Approval (Human-in-the-loop)** — triage summarizes the request → a
@@ -175,6 +178,9 @@ exceeded; `allowed_tools` filters what an agent can call.
    it. The clearest demo of `interrupt()`/resume over a real channel.
 5. **Dispute Investigator (DeepAgent)** — a `deepagents` node that plans, calls
    tools, and spawns sub-agents to investigate a disputed charge and recommend.
+6. **Lead Qualification & Routing** *(non-payments)* — enrich an inbound lead →
+   an LLM scores hot/warm/cold → routes to outreach / nurture / archive. Shows the
+   runtime is domain-agnostic, not payments-only.
 
 ---
 
