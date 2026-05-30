@@ -55,22 +55,22 @@ class Executor:
                 pass
 
     async def run(self, run_id, graph, initial_input, on_reply=None, *,
-                  recursion_limit: int = 25, max_tokens: int | None = None,
+                  on_interrupt=None, recursion_limit: int = 25, max_tokens: int | None = None,
                   max_cost: float | None = None) -> str:
         await self._set_status(run_id, "running", started=True)
         await self._event(run_id, "run_started", {})
-        return await self._stream(run_id, graph, initial_input, on_reply,
+        return await self._stream(run_id, graph, initial_input, on_reply, on_interrupt,
                                   recursion_limit, max_tokens, max_cost)
 
     async def resume(self, run_id, graph, value, on_reply=None, *,
-                     recursion_limit: int = 25, max_tokens: int | None = None,
+                     on_interrupt=None, recursion_limit: int = 25, max_tokens: int | None = None,
                      max_cost: float | None = None) -> str:
         await self._set_status(run_id, "running")
         await self._event(run_id, "run_status", {"status": "running"})
-        return await self._stream(run_id, graph, Command(resume=value), on_reply,
+        return await self._stream(run_id, graph, Command(resume=value), on_reply, on_interrupt,
                                   recursion_limit, max_tokens, max_cost)
 
-    async def _stream(self, run_id, graph, inp, on_reply,
+    async def _stream(self, run_id, graph, inp, on_reply, on_interrupt=None,
                       recursion_limit=25, max_tokens=None, max_cost=None) -> str:
         cfg = {"configurable": {"thread_id": str(run_id)}, "recursion_limit": recursion_limit}
         final_text: str | None = None
@@ -141,8 +141,11 @@ class Executor:
                 await self._persist(run_id, "assistant", question, node_id="interrupt")
                 await self._set_status(run_id, "waiting_human")
                 await self._event(run_id, "interrupt", {"node_id": "interrupt", "value": question})
-                if on_reply:
-                    await on_reply(question)
+                # Route the approval prompt to the approver channel if given, else
+                # back to the inbound reply channel (single-bot mode).
+                notify = on_interrupt or on_reply
+                if notify:
+                    await notify(question)
                 return "waiting_human"
 
             await self._finalize(run_id, "completed", total_tokens, total_cost)

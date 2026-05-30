@@ -18,6 +18,9 @@ class ChannelBindingCreate(BaseModel):
     # Telegram chat id to push approval prompts to for console/scheduled runs.
     # Optional: also auto-captured the first time someone messages the bot.
     notify_chat_id: str | None = None
+    # "customer" (default) or "approval" — an approval bot receives the human
+    # approval prompt and the approver's reply resumes the run.
+    role: str = "customer"
 
 
 class ChannelBindingRead(BaseModel):
@@ -35,3 +38,4 @@ class ChannelBindingRead(BaseModel):
     label: str | None = None
     has_token: bool = False
     notify_chat_id: str | None = None
+    role: str = "customer"

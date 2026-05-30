@@ -31,6 +31,7 @@ def _read(b: ChannelBinding) -> ChannelBindingRead:
         bot_username=cfg.get("bot_username"), label=cfg.get("label"),
         has_token=bool(cfg.get("bot_token")),
         notify_chat_id=cfg.get("notify_chat_id"),
+        role=cfg.get("role", "customer"),
     )
 
 
@@ -48,6 +49,8 @@ async def create_binding(body: ChannelBindingCreate, request: Request,
         config["label"] = body.label
     if body.notify_chat_id:
         config["notify_chat_id"] = body.notify_chat_id.strip()
+    if body.role and body.role != "customer":
+        config["role"] = body.role
     if body.bot_token:
         if settings.telegram_bot_token and body.bot_token == settings.telegram_bot_token:
             raise AppError("that token is already the shared default bot",

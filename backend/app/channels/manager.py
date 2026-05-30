@@ -63,10 +63,11 @@ class ChannelManager:
         if not token:
             raise ValueError("binding has no bot_token")
         wf_id = binding.workflow_id
+        role = (binding.config_json or {}).get("role", "customer")
         ch = TelegramChannel(token)
 
         async def handler(m):
-            await self.router.handle_inbound(m, send=ch.send, workflow_id=wf_id)
+            await self.router.handle_inbound(m, send=ch.send, workflow_id=wf_id, role=role)
 
         await ch.start(handler)
         self.bots[bid] = ch
