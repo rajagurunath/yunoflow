@@ -19,6 +19,14 @@ live monitor.
 
 ---
 
+## 🎥 Demo video
+
+[![Watch the YunoFlow demo](docs/demo-thumbnail.png)](https://www.loom.com/share/8459a66f49d5488884233098407f2fad)
+
+▶ **[Watch the 5-minute walkthrough on Loom](https://www.loom.com/share/8459a66f49d5488884233098407f2fad)** — landing tour, templates, a live multi-agent run, and the **human-in-the-loop refund approval over Telegram**.
+
+---
+
 ## What you'll see
 
 Templates → instantiate **Refund Approval (Human-in-the-loop)** → a triage agent
