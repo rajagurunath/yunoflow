@@ -155,14 +155,16 @@ def _refund_with_approval() -> dict:
         "nodes": [
             {"id": "start", "type": "start"},
             _agent("triage", "Triage", "summarizes the refund request",
-                   "You read the customer's message and summarize the refund being requested "
-                   "(order, amount, reason) in one short paragraph for a human approver."),
+                   "You read the customer's message and write a short, friendly summary of the "
+                   "refund being requested — order id, what happened, and the amount if mentioned "
+                   "(otherwise say 'amount on file'). 2-3 sentences, addressed to a human approver."),
             _human("approval",
-                   "A refund was requested. Review the summary above and reply 'ok' to approve, "
-                   "or send instructions/changes for the agent to follow."),
+                   "Reply 'ok' to approve this refund, or send instructions/changes for the agent to follow."),
             _agent("refund", "Refund Specialist", "issues the approved refund",
-                   "You issue the refund the human approved, following any instructions they gave. "
-                   "Use the AP2 payment tools to create and execute the refund, then confirm to the customer.",
+                   "The human just approved the refund. Do NOT ask the customer for any more "
+                   "details — assume the order, amount and payment method are already on file. "
+                   "Issue the refund now using the AP2 payment tools and reply with ONE short, "
+                   "friendly confirmation including a refund reference id and a 3-5 business day timeline.",
                    tools=["read_kb", "create_payment_intent", "create_cart_mandate", "execute_payment"]),
             {"id": "end", "type": "end"},
         ],
