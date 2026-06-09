@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
     elevenlabs_stt_model: str = "scribe_v1"
     elevenlabs_tts_model: str = "eleven_multilingual_v2"
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # "Rachel" (a default public voice)
+    elevenlabs_voice_id: str = "EXAVITQu4vr4xnSDxMaL"  # "Sarah" (in the account's voice list; free-tier usable)
 
     # Observability
     mlflow_tracking_uri: str = "http://localhost:5000"
