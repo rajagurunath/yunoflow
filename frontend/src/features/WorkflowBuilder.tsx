@@ -110,33 +110,48 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   };
 
   const toggleVoice = async () => {
-    // Stop an in-progress ElevenLabs recording -> upload for Scribe transcription.
+    // Second tap: stop the recording and upload it for ElevenLabs Scribe STT.
     if (listening && recRef.current) {
       const rec = recRef.current; recRef.current = null;
       setListening(false); setTranscribing(true); setGenErr(null);
       try {
         const blob = await rec.stop();
         const { text } = await api.transcribeAudio(blob);
-        if (text) setGenPrompt((p) => (p ? p + " " : "") + text);
-      } catch (e) { setGenErr(String(e)); } finally { setTranscribing(false); }
+        if (text && text.trim()) setGenPrompt((p) => (p ? p + " " : "") + text.trim());
+        else setGenErr("Didn't catch any speech — tap 🎙, speak, then tap ■ to transcribe.");
+      } catch (e) { setGenErr("Transcription failed: " + String(e)); }
+      finally { setTranscribing(false); }
       return;
     }
-    // Stop an in-progress browser-speech session (fallback path).
+    // Stop an in-progress browser-speech (fallback) session.
     if (listening) { voiceRef.current?.stop(); setListening(false); return; }
-    // Start: prefer ElevenLabs (record audio); fall back to browser Web Speech.
+
+    // First tap: start recording. Surface mic errors instead of failing silently.
+    setGenErr(null);
     if (recordingSupported()) {
       try {
         recRef.current = await startRecording();
         setListening(true);
         return;
-      } catch { /* mic denied or unavailable — fall through to Web Speech */ }
+      } catch (e: any) {
+        const name = e?.name || "";
+        if (name === "NotAllowedError" || name === "SecurityError")
+          setGenErr("🎙 Microphone blocked. Click the camera/mic icon in your browser's address bar, allow access, then tap the mic again — or just type your workflow below.");
+        else if (name === "NotFoundError")
+          setGenErr("🎙 No microphone found. You can type your workflow instead.");
+        else if (name !== "NotSupportedError")
+          setGenErr("🎙 Couldn't start the mic: " + (e?.message || name || "unknown") + ". You can type instead.");
+        // Only fall back to browser Web Speech when recording is genuinely unsupported.
+        if (name !== "NotSupportedError") return;
+      }
     }
     const handle = startVoice({
       onText: (t) => setGenPrompt(t),
       onEnd: () => setListening(false),
-      onError: () => setListening(false),
+      onError: (err) => { setListening(false); setGenErr("Voice input failed (" + err + "). You can type your workflow instead."); },
     });
     if (handle) { voiceRef.current = handle; setListening(true); }
+    else setGenErr("Voice input isn't available in this browser. You can type your workflow below.");
   };
 
   const explainWf = async () => {
@@ -351,17 +366,17 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
                 <button
                   onClick={toggleVoice}
                   disabled={transcribing}
-                  title="Speak your workflow (ElevenLabs Scribe)"
+                  title={listening ? "Stop & transcribe (ElevenLabs Scribe)" : "Speak your workflow (ElevenLabs Scribe)"}
                   className={`grid h-10 w-10 place-items-center rounded-lg border text-lg ${
                     listening ? "border-coral/50 bg-coral/10 text-coral animate-pulse" : "border-line2 text-t1 hover:text-t0"}`}
-                >{transcribing ? "…" : "🎙"}</button>
+                >{transcribing ? "…" : listening ? "■" : "🎙"}</button>
               )}
               <Button variant="primary" onClick={generate} disabled={genBusy || !genPrompt.trim()}>
                 {genBusy ? "Designing…" : "Generate"}
               </Button>
             </div>
           </div>
-          {listening && <div className="mt-2 font-mono text-[11px] text-coral">● recording… (tap the mic again to transcribe with ElevenLabs)</div>}
+          {listening && <div className="mt-2 font-mono text-[11px] text-coral">● recording… speak now, then tap ■ to transcribe with ElevenLabs</div>}
           {transcribing && <div className="mt-2 font-mono text-[11px] text-cyan">◌ transcribing with ElevenLabs Scribe…</div>}
           {genErr && <div className="mt-2 font-mono text-[11px] text-coral">{genErr}</div>}
         </Panel>
