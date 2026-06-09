@@ -50,6 +50,20 @@ export const api = {
   createWorkflow: (w: { name: string; description?: string; graph_json: unknown }) =>
     post("/api/workflows", w).then(j<Workflow>),
   generateWorkflow: (prompt: string) => post("/api/workflows/generate", { prompt }).then(j<Workflow>),
+  // Voice: transcribe recorded audio (ElevenLabs Scribe) -> text. FormData, so we
+  // let the browser set the multipart content-type/boundary (no JSON header here).
+  transcribeAudio: (blob: Blob) => {
+    const fd = new FormData();
+    fd.append("file", blob, "audio.webm");
+    return f("/api/workflows/transcribe", { method: "POST", body: fd }).then(j<{ text: string }>);
+  },
+  // Voice-back: text -> spoken mp3 (ElevenLabs TTS).
+  speak: (text: string) =>
+    f("/api/workflows/speak", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    }).then((r) => { if (!r.ok) throw new Error("speech synthesis failed"); return r.blob(); }),
+  explainWorkflow: (id: string) => post(`/api/workflows/${id}/explain`).then(j<{ explanation: string }>),
   patchWorkflow: (id: string, graph_json: unknown) =>
     f(`/api/workflows/${id}`, {
       method: "PATCH", headers: { "content-type": "application/json" },

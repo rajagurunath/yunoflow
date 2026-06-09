@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi.responses import Response
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +14,8 @@ from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.models import Agent, Workflow
 from app.runtime.compiler import validate
-from app.runtime.generator import generate_workflow_spec, spec_to_graph_json
+from app.runtime.generator import explain_workflow, generate_workflow_spec, spec_to_graph_json
+from app.runtime.speech import synthesize_speech, transcribe_audio
 from app.scheduling import scheduler as sched
 from app.schemas.graph import GraphJSON, ValidationResult
 from app.schemas.workflow import GenerateRequest, WorkflowCreate, WorkflowRead, WorkflowUpdate
@@ -72,6 +75,27 @@ async def generate_workflow(body: GenerateRequest, db: AsyncSession = Depends(ge
     return wf
 
 
+@router.post("/transcribe")
+async def transcribe(file: UploadFile = File(...)):
+    """Spoken request -> text (ElevenLabs Scribe). The client then POSTs the text
+    to /generate, so the user can review the transcript before building."""
+    data = await file.read()
+    text = await transcribe_audio(data, file.filename or "audio.webm",
+                                  file.content_type or "audio/webm")
+    return {"text": text}
+
+
+class SpeakRequest(BaseModel):
+    text: str
+
+
+@router.post("/speak")
+async def speak(body: SpeakRequest):
+    """Text -> spoken mp3 (ElevenLabs TTS) for the "voice-back" feature."""
+    audio = await synthesize_speech(body.text[:5000])
+    return Response(content=audio, media_type="audio/mpeg")
+
+
 @router.get("/{workflow_id}", response_model=WorkflowRead)
 async def get_workflow(workflow_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     wf = await db.get(Workflow, workflow_id)
@@ -124,3 +148,46 @@ async def validate_workflow(workflow_id: uuid.UUID, db: AsyncSession = Depends(g
             if agent:
                 agents[aid] = agent
     return validate(graph, agents)
+
+
+@router.post("/{workflow_id}/explain")
+async def explain(workflow_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Plain-English summary of what a workflow does (the reverse of /generate)."""
+    wf = await db.get(Workflow, workflow_id)
+    if wf is None:
+        raise NotFoundError(f"workflow {workflow_id} not found")
+    graph = wf.graph_json or {}
+
+    # Resolve agent names/roles referenced by nodes so the explanation is concrete.
+    resolved: dict[str, dict] = {}
+    for n in graph.get("nodes", []):
+        aid = (n.get("data") or {}).get("agent_id")
+        if not aid or str(aid) in resolved:
+            continue
+        try:
+            a = await db.get(Agent, uuid.UUID(str(aid)))
+        except (ValueError, TypeError):
+            a = None
+        if a:
+            resolved[str(aid)] = {"name": a.name, "role": a.role}
+
+    nodes = []
+    for n in graph.get("nodes", []):
+        d = n.get("data") or {}
+        item: dict = {"id": n.get("id"), "type": n.get("type")}
+        aid = d.get("agent_id")
+        if aid and str(aid) in resolved:
+            item["agent"] = resolved[str(aid)]
+        if n.get("type") == "condition":
+            item["question"] = d.get("prompt")
+            item["branches"] = [b.get("label") for b in (d.get("branches") or [])]
+        nodes.append(item)
+    edges = [{"from": e.get("source"), "to": e.get("target"),
+              "when": (e.get("data") or {}).get("when")} for e in graph.get("edges", [])]
+
+    summary = {"name": wf.name, "description": wf.description, "nodes": nodes, "edges": edges}
+    try:
+        text = await explain_workflow(summary)
+    except Exception as exc:  # noqa: BLE001
+        raise AppError(f"could not explain workflow: {exc}", code="explain_failed", status_code=502)
+    return {"explanation": text}

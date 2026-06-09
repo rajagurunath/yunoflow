@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     # Channels
     telegram_bot_token: str = ""
 
+    # Voice (ElevenLabs) — speech-to-text (Scribe) for voice->workflow, and
+    # text-to-speech for "voice-back". Key stays server-side.
+    elevenlabs_api_key: str = ""
+    elevenlabs_stt_model: str = "scribe_v1"
+    elevenlabs_tts_model: str = "eleven_multilingual_v2"
+    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # "Rachel" (a default public voice)
+
     # Observability
     mlflow_tracking_uri: str = "http://localhost:5000"
     feature_mlflow: bool = False

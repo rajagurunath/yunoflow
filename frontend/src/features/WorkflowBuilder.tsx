@@ -6,7 +6,7 @@ import {
 import { api, openRunSocket } from "../lib/api";
 import type { Agent, GraphJSON, Run, Workflow, WSEvent } from "../lib/types";
 import { layoutPositions } from "../lib/layout";
-import { startVoice, voiceSupported } from "../lib/voice";
+import { recordingSupported, startRecording, startVoice, voiceSupported } from "../lib/voice";
 import { nodeTypes } from "../nodes/nodes";
 import { Button, Panel, Pill, statusTone } from "../components/ui";
 
@@ -86,7 +86,15 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [genBusy, setGenBusy] = useState(false);
   const [genErr, setGenErr] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const voiceRef = useRef<{ stop: () => void } | null>(null);
+  const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
+
+  // Explain-this-workflow + voice-back (TTS).
+  const [explain, setExplain] = useState<string | null>(null);
+  const [explainBusy, setExplainBusy] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const generate = async () => {
     if (!genPrompt.trim()) return;
@@ -101,14 +109,58 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
     }
   };
 
-  const toggleVoice = () => {
+  const toggleVoice = async () => {
+    // Stop an in-progress ElevenLabs recording -> upload for Scribe transcription.
+    if (listening && recRef.current) {
+      const rec = recRef.current; recRef.current = null;
+      setListening(false); setTranscribing(true); setGenErr(null);
+      try {
+        const blob = await rec.stop();
+        const { text } = await api.transcribeAudio(blob);
+        if (text) setGenPrompt((p) => (p ? p + " " : "") + text);
+      } catch (e) { setGenErr(String(e)); } finally { setTranscribing(false); }
+      return;
+    }
+    // Stop an in-progress browser-speech session (fallback path).
     if (listening) { voiceRef.current?.stop(); setListening(false); return; }
+    // Start: prefer ElevenLabs (record audio); fall back to browser Web Speech.
+    if (recordingSupported()) {
+      try {
+        recRef.current = await startRecording();
+        setListening(true);
+        return;
+      } catch { /* mic denied or unavailable — fall through to Web Speech */ }
+    }
     const handle = startVoice({
       onText: (t) => setGenPrompt(t),
       onEnd: () => setListening(false),
       onError: () => setListening(false),
     });
     if (handle) { voiceRef.current = handle; setListening(true); }
+  };
+
+  const explainWf = async () => {
+    if (!wf) return;
+    setExplainBusy(true); setExplain(null);
+    try {
+      const r = await api.explainWorkflow(wf.id);
+      setExplain(r.explanation || "(no explanation returned)");
+    } catch (e) { setExplain("Couldn't explain this workflow: " + String(e)); }
+    finally { setExplainBusy(false); }
+  };
+
+  const speakText = async (text: string) => {
+    if (!text.trim()) return;
+    try {
+      setSpeaking(true);
+      const blob = await api.speak(text);
+      const url = URL.createObjectURL(blob);
+      audioRef.current?.pause();
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { setSpeaking(false); URL.revokeObjectURL(url); };
+      await audio.play();
+    } catch { setSpeaking(false); }
   };
 
   // When connecting out of a condition node, ask for the branch label.
@@ -295,20 +347,22 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
               className="h-20 flex-1 resize-none rounded-lg border border-line2 bg-bg1 px-3 py-2 text-sm text-t0 outline-none focus:border-mint/50"
             />
             <div className="flex flex-col gap-2">
-              {voiceSupported() && (
+              {(recordingSupported() || voiceSupported()) && (
                 <button
                   onClick={toggleVoice}
-                  title="Speak your workflow"
+                  disabled={transcribing}
+                  title="Speak your workflow (ElevenLabs Scribe)"
                   className={`grid h-10 w-10 place-items-center rounded-lg border text-lg ${
                     listening ? "border-coral/50 bg-coral/10 text-coral animate-pulse" : "border-line2 text-t1 hover:text-t0"}`}
-                >🎙</button>
+                >{transcribing ? "…" : "🎙"}</button>
               )}
               <Button variant="primary" onClick={generate} disabled={genBusy || !genPrompt.trim()}>
                 {genBusy ? "Designing…" : "Generate"}
               </Button>
             </div>
           </div>
-          {listening && <div className="mt-2 font-mono text-[11px] text-coral">● listening… (speak, then it fills in)</div>}
+          {listening && <div className="mt-2 font-mono text-[11px] text-coral">● recording… (tap the mic again to transcribe with ElevenLabs)</div>}
+          {transcribing && <div className="mt-2 font-mono text-[11px] text-cyan">◌ transcribing with ElevenLabs Scribe…</div>}
           {genErr && <div className="mt-2 font-mono text-[11px] text-coral">{genErr}</div>}
         </Panel>
 
@@ -340,11 +394,28 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
           <Button variant="primary" onClick={start} disabled={hud.status === "running"}>▶ Run</Button>
           <Button onClick={save}>Save</Button>
           <Button onClick={validate}>Validate</Button>
+          <Button onClick={explainWf} disabled={explainBusy}>{explainBusy ? "Explaining…" : "💬 Explain"}</Button>
           <Button onClick={() => deleteWorkflow(wf.id, wf.name)}>🗑 Delete</Button>
           {wf.schedule_cron && <Pill tone="mint">⏱ {wf.schedule_cron}</Pill>}
           {hud.status && <Pill tone={statusTone(hud.status)}>● {hud.status}</Pill>}
           {editStatus && <span className="font-mono text-[11px] text-t2">{editStatus}</span>}
         </div>
+
+        {/* Explain-this-workflow (plain English) + read aloud (ElevenLabs TTS) */}
+        {explain && (
+          <div className="absolute right-4 top-16 z-20 w-80 rounded-xl border border-line bg-bg2/95 p-4 shadow-glow backdrop-blur">
+            <div className="flex items-center justify-between">
+              <span className="font-disp text-sm">💬 What this workflow does</span>
+              <button onClick={() => setExplain(null)} className="text-t3 hover:text-coral">✕</button>
+            </div>
+            <p className="mt-2 text-[13px] leading-relaxed text-t1">{explain}</p>
+            <div className="mt-3">
+              <Button onClick={() => speakText(explain)} disabled={speaking}>
+                {speaking ? "🔊 Speaking…" : "🔊 Read aloud"}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Add-node palette */}
         <div className="absolute left-4 top-16 z-10 flex flex-col gap-1.5 rounded-xl border border-line bg-bg2/85 p-2 backdrop-blur">
@@ -420,6 +491,20 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
             <div><div className="font-mono text-[10px] text-t2">tokens</div><div className="font-mono text-sm text-mint">{hud.tokens.toLocaleString()}</div></div>
             <div><div className="font-mono text-[10px] text-t2">cost</div><div className="font-mono text-sm text-mint">${hud.cost.toFixed(4)}</div></div>
           </div>
+
+          {/* Voice-back: speak the final agent answer aloud (ElevenLabs TTS). */}
+          {(() => {
+            const last = [...events].reverse().find((e) => e.type === "agent_message")?.data?.content;
+            return last ? (
+              <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-2">
+                <span className="font-mono text-[10px] text-t2">final answer</span>
+                <button onClick={() => speakText(String(last))} disabled={speaking}
+                  className="rounded-md border border-line2 px-2 py-1 text-[11px] text-t1 hover:border-mint/40 hover:text-mint">
+                  {speaking ? "🔊 Speaking…" : "🔊 Read result aloud"}
+                </button>
+              </div>
+            ) : null;
+          })()}
 
           {hud.status === "waiting_human" && (
             <div className="border-b border-coral/30 bg-coral/5 px-4 py-3">

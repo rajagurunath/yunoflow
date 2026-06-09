@@ -55,6 +55,23 @@ async def generate_workflow_spec(prompt: str) -> dict:
     return _extract_json(str(getattr(resp, "content", "") or ""))
 
 
+_EXPLAIN_SYSTEM = """You explain AI agent workflows to a non-technical reader.
+Given a workflow's structure (its agents, decision points, and how they connect),
+write 2-4 short sentences in plain English describing what it does end to end:
+what triggers it, what each agent does, where it branches or pauses for a human,
+and what the outcome is. No JSON, no bullet lists, no preamble — just prose."""
+
+
+async def explain_workflow(summary: dict) -> str:
+    """Plain-English explanation of a workflow (the NL<->graph round-trip, in reverse)."""
+    model = llm_module.build_chat_model(temperature=0.3)
+    resp = await model.ainvoke([
+        SystemMessage(content=_EXPLAIN_SYSTEM),
+        HumanMessage(content=json.dumps(summary, ensure_ascii=False)),
+    ])
+    return str(getattr(resp, "content", "") or "").strip()
+
+
 def _extract_json(text: str) -> dict:
     """Tolerantly pull the JSON object out of an LLM reply."""
     text = text.strip()
