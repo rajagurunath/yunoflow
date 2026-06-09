@@ -89,6 +89,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
   const [transcribing, setTranscribing] = useState(false);
   const voiceRef = useRef<{ stop: () => void } | null>(null);
   const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
+  const recStartRef = useRef<number>(0);
 
   // Explain-this-workflow + voice-back (TTS).
   const [explain, setExplain] = useState<string | null>(null);
@@ -116,9 +117,15 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
       setListening(false); setTranscribing(true); setGenErr(null);
       try {
         const blob = await rec.stop();
-        const { text } = await api.transcribeAudio(blob);
-        if (text && text.trim()) setGenPrompt((p) => (p ? p + " " : "") + text.trim());
-        else setGenErr("Didn't catch any speech — tap 🎙, speak, then tap ■ to transcribe.");
+        const ms = recStartRef.current ? Date.now() - recStartRef.current : 0;
+        const kb = Math.round(blob.size / 1024);
+        if (ms < 700) {
+          setGenErr(`Recording too short (${ms}ms). Tap 🎙, speak a full sentence, then tap ■.`);
+        } else {
+          const { text } = await api.transcribeAudio(blob);
+          if (text && text.trim()) setGenPrompt((p) => (p ? p + " " : "") + text.trim());
+          else setGenErr(`Didn't catch any speech (recorded ${kb} KB, ${ms}ms). Speak clearly into your mic, then tap ■. If KB is ~0, your input device may be muted or wrong.`);
+        }
       } catch (e) { setGenErr("Transcription failed: " + String(e)); }
       finally { setTranscribing(false); }
       return;
@@ -131,6 +138,7 @@ export function WorkflowBuilder({ workflowId, onOpen }: { workflowId: string | n
     if (recordingSupported()) {
       try {
         recRef.current = await startRecording();
+        recStartRef.current = Date.now();
         setListening(true);
         return;
       } catch (e: any) {

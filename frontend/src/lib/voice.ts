@@ -15,7 +15,9 @@ export async function startRecording(): Promise<{ stop: () => Promise<Blob> }> {
   const mr = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-  mr.start();
+  // Timeslice: emit a chunk every 250ms so even short recordings reliably
+  // capture audio (a plain start() can yield an empty blob on a fast stop).
+  mr.start(250);
   return {
     stop: () => new Promise<Blob>((resolve) => {
       mr.onstop = () => {
