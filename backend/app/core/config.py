@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     # text-to-speech for "voice-back". Key stays server-side.
     elevenlabs_api_key: str = ""
     elevenlabs_stt_model: str = "scribe_v1"
+    elevenlabs_stt_language: str = "en"  # force STT language (ISO-639-1); "" = auto-detect
     elevenlabs_tts_model: str = "eleven_multilingual_v2"
     elevenlabs_voice_id: str = "EXAVITQu4vr4xnSDxMaL"  # "Sarah" (in the account's voice list; free-tier usable)
 

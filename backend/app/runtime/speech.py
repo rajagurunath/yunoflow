@@ -31,11 +31,16 @@ async def transcribe_audio(data: bytes, filename: str = "audio.webm",
                            content_type: str = "audio/webm") -> str:
     """Transcribe recorded audio via ElevenLabs Scribe -> plain text."""
     key = _require_key()
+    form = {"model_id": settings.elevenlabs_stt_model}
+    # Pin the language so Scribe doesn't auto-detect (and mis-transcribe in
+    # another language); blank = let ElevenLabs auto-detect.
+    if settings.elevenlabs_stt_language:
+        form["language_code"] = settings.elevenlabs_stt_language
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
             f"{_BASE}/speech-to-text",
             headers={"xi-api-key": key},
-            data={"model_id": settings.elevenlabs_stt_model},
+            data=form,
             files={"file": (filename, data, content_type)},
         )
     if resp.status_code >= 400:
