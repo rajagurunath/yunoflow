@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { PublicFooter, PublicNav, type PublicPage } from "../components/PublicChrome";
+import { API_DOCS_URL } from "../lib/api";
+import { API_REFERENCE_URL, DEMO_RETIRED } from "../lib/config";
 
 /* A real, self-contained docs page — grounded in what the platform actually does
  * (LangGraph runtime, 14 agent dimensions, channels + human-in-the-loop, cron
@@ -271,7 +273,13 @@ make up                       # db + backend + frontend
 
           <section>
             <H id="api" kicker="Integrate">API reference</H>
-            <p className={body}>Everything in the console is a REST endpoint; full OpenAPI is at <K>/docs</K>.</p>
+            <p className={body}>
+              Everything in the console is a REST endpoint, fully described by an OpenAPI spec.{" "}
+              <a href={DEMO_RETIRED ? API_REFERENCE_URL : API_DOCS_URL} target="_blank" rel="noreferrer"
+                className="text-emerald underline-offset-2 hover:underline">
+                Browse the full API reference ↗
+              </a>{DEMO_RETIRED ? " (a static snapshot — the live backend is retired)." : "."}
+            </p>
             <Code>{`POST /api/auth/login            { email }            -> { token, user }
 GET  /api/agents                                     list agents
 POST /api/agents                <agent>              create (14 dimensions)

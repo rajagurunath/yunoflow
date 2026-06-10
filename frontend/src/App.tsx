@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Shell } from "./components/Shell";
 import type { PublicPage } from "./components/PublicChrome";
 import { auth } from "./lib/auth";
+import { DEMO_RETIRED } from "./lib/config";
 import { AgentStudio } from "./features/AgentStudio";
 import { ChannelsView } from "./features/ChannelsView";
+import { DemoRetired } from "./features/DemoRetired";
 import { Docs } from "./features/Docs";
 import { Landing } from "./features/Landing";
 import { Login } from "./features/Login";
@@ -32,14 +34,20 @@ function Console({ onSignOut }: { onSignOut: () => void }) {
 }
 
 export function App() {
-  const [authed, setAuthed] = useState(auth.isAuthed());
+  // With the backend retired, the (dead) console is never mounted — even if an old
+  // token is still in localStorage from a previous live session.
+  const [authed, setAuthed] = useState(!DEMO_RETIRED && auth.isAuthed());
   const [page, setPage] = useState<PublicPage | "login">("landing");
+
+  useEffect(() => { if (DEMO_RETIRED) auth.clear(); }, []);
 
   if (authed) {
     return <Console onSignOut={() => { auth.clear(); setAuthed(false); setPage("landing"); }} />;
   }
   if (page === "login") {
-    return <Login onSuccess={() => setAuthed(true)} onBack={() => setPage("landing")} />;
+    return DEMO_RETIRED
+      ? <DemoRetired onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />
+      : <Login onSuccess={() => setAuthed(true)} onBack={() => setPage("landing")} />;
   }
   if (page === "pricing") {
     return <Pricing onNav={(p) => setPage(p)} onSignIn={() => setPage("login")} />;

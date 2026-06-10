@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YunoFlow API Reference</title>
+  <link rel="icon" href="/favicon.svg" />
+  <meta name="description" content="Static OpenAPI reference for the YunoFlow REST + WebSocket API — the JSON request/response contract. Built for the Yuno AI Engineer hiring challenge." />
+  <style>
+    :root { --emerald: #0d6e54; --ink: #14181c; --paper: #fffdf9; --sand: #f5f2ec; --vline: #e7e2d8; --inkmut: #5c6470; }
+    html, body { margin: 0; padding: 0; background: var(--paper); }
+    /* Slim brand bar above Redoc, matching the app chrome. */
+    #topbar {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 14px;
+      height: 56px; padding: 0 20px;
+      background: rgba(255,253,249,.9); backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--vline);
+      font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    #topbar .brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); }
+    #topbar .brand b { font-weight: 600; font-size: 17px; letter-spacing: -.01em; }
+    #topbar .note {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 7px;
+      font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: #b78a2e;
+    }
+    #topbar .note i { width: 6px; height: 6px; border-radius: 50%; background: #b78a2e; display: inline-block; }
+    #topbar a.back { font-size: 13.5px; color: var(--inkmut); text-decoration: none; }
+    #topbar a.back:hover { color: var(--ink); }
+    .mark { width: 26px; height: 26px; border-radius: 7px; background: var(--emerald);
+      display: grid; place-items: center; color: var(--paper); font-weight: 700; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <a class="brand" href="/"><span class="mark">Y</span><b>YunoFlow</b></a>
+    <a class="back" href="/">&larr; Back to site</a>
+    <span class="note"><i></i> Reference only · live API retired</span>
+  </div>
+  <div id="redoc"></div>
+
+  <script src="/redoc.standalone.js"></script>
+  <script>
+    Redoc.init(
+      "/openapi.json",
+      {
+        scrollYOffset: 56,
+        hideDownloadButton: false,
+        expandResponses: "200,201",
+        requiredPropsFirst: true,
+        theme: {
+          colors: { primary: { main: "#0d6e54" }, http: { get: "#0d6e54", post: "#b78a2e" } },
+          typography: {
+            fontSize: "15px",
+            fontFamily: 'ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif',
+            headings: { fontFamily: 'Georgia, "Times New Roman", serif', fontWeight: "600" },
+            code: { fontFamily: 'ui-monospace, "SF Mono", "IBM Plex Mono", monospace', fontSize: "13px" }
+          },
+          sidebar: { backgroundColor: "#f5f2ec", width: "270px" },
+          rightPanel: { backgroundColor: "#14181c" }
+        }
+      },
+      document.getElementById("redoc")
+    );
+  </script>
+</body>
+</html>
